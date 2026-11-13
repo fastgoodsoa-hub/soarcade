@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fastgoodsoa-hub.github.io/soarcade/sitemap.xml

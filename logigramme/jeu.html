@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="fr">
+<head><meta name="robots" content="noindex">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Logigramme</title>
+<meta name="description" content="Logigrammes générés à l'infini, 3 niveaux de difficulté. Jeu de logique gratuit, jouable sur mobile.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0c0a1d;--panel:#16133a;--panel2:#1e1a4a;--line:#363170;--thick:#8b7cff;
+  --txt:#ece9ff;--mut:#9c97c9;--neon:#33f0c8;--pink:#ff4fa3;--x:#ff6b8a;--o:#33f0c8;
+  --hl:rgba(139,124,255,.22);--cs:32px;--lw:84px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:radial-gradient(ellipse at top,#231d5c 0%,var(--bg) 60%) fixed;background-color:var(--bg);color:var(--txt);
+  font-family:Inter,system-ui,sans-serif;min-height:100vh;-webkit-tap-highlight-color:transparent}
+main{max-width:1040px;margin:0 auto;padding:16px 16px 64px}
+h1{font-family:'Press Start 2P',monospace;font-size:20px;letter-spacing:1px;margin:6px 0 14px;text-align:center;
+  color:var(--neon);text-shadow:0 0 8px rgba(51,240,200,.7),0 0 22px rgba(51,240,200,.35)}
+h1 span{color:var(--pink);text-shadow:0 0 8px rgba(255,79,163,.7)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-bottom:10px}
+.seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:3px}
+.seg button{background:none;border:0;color:var(--mut);font:600 14px Inter,sans-serif;padding:8px 12px;border-radius:9px;cursor:pointer}
+.seg button.on{background:var(--thick);color:#fff;box-shadow:0 0 12px rgba(139,124,255,.6)}
+.timer{font-family:'Press Start 2P',monospace;font-size:13px;color:var(--pink);background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:10px 12px;min-width:84px;text-align:center}
+.btns{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0 12px}
+.btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);font:600 13px Inter,sans-serif;padding:9px 12px;
+  border-radius:10px;cursor:pointer;touch-action:manipulation}
+.btn:active{transform:translateY(1px)}
+.btn.main{background:var(--neon);color:#0c0a1d;border-color:var(--neon)}
+.opt{font-size:13px;color:var(--mut);display:flex;align-items:center;gap:6px;justify-content:center;margin-bottom:8px}
+.msg{min-height:20px;text-align:center;font-size:14px;color:var(--neon);margin-bottom:6px}
+.msg.bad{color:var(--pink)}
+.layout{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start;justify-content:center}
+.card{background:rgba(22,19,58,.85);border:1px solid var(--line);border-radius:16px;padding:12px}
+#gridcard{flex:1 1 520px;min-width:0}
+#gridwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+#cluecard{flex:1 1 300px;max-width:520px}
+.theme{font-weight:700;font-size:16px;margin:0 0 4px}
+.intro{color:var(--mut);font-size:13px;margin:0 0 10px;line-height:1.4}
+ol.clues{margin:0;padding-left:24px}
+ol.clues li{padding:7px 4px;border-bottom:1px dashed var(--line);font-size:15px;line-height:1.4;cursor:pointer;user-select:none}
+ol.clues li.done{color:var(--mut);text-decoration:line-through;opacity:.55}
+ol.clues li::marker{color:var(--neon);font-weight:700}
+table.grid{border-collapse:collapse;margin:0 auto;touch-action:manipulation}
+.grid th{font-weight:600;color:var(--txt)}
+.grid th.cname{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--neon);padding:2px 0 4px}
+.grid th.vl{width:var(--cs);min-width:var(--cs);height:86px;vertical-align:bottom;padding:0 0 4px}
+.grid th.vl span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:12px;white-space:nowrap;display:inline-block}
+.grid th.rl{text-align:right;padding:0 6px 0 2px;font-size:12px;white-space:nowrap;max-width:var(--lw);width:var(--lw);overflow:hidden;text-overflow:ellipsis}
+.grid th.rc{width:20px;min-width:20px;padding:0}
+.grid th.rc span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--neon)}
+.grid th.hl{background:var(--hl);color:#fff}
+.grid td.cell{width:var(--cs);height:var(--cs);min-width:var(--cs);border:1px solid var(--line);background:var(--panel);text-align:center;
+  padding:0;cursor:pointer;user-select:none;font-size:calc(var(--cs)*.52);line-height:1;transition:background .12s}
+.grid td.cell.x{color:var(--x)}
+.grid td.cell.o{color:var(--o);text-shadow:0 0 6px rgba(51,240,200,.8)}
+.grid td.cell.hlc{background:var(--panel2)}
+.grid td.cell.err{background:rgba(255,79,163,.45)}
+.grid td.cell.flash{animation:fl 1.2s ease}
+@keyframes fl{0%,60%{background:rgba(51,240,200,.55)}100%{background:var(--panel)}}
+.grid .bl{border-left:2px solid var(--thick)!important}.grid .br{border-right:2px solid var(--thick)!important}
+.grid .bt{border-top:2px solid var(--thick)!important}.grid .bb{border-bottom:2px solid var(--thick)!important}
+.grid td.void{border:0;background:none}
+details.rules{max-width:640px;margin:0 auto 12px;font-size:14px;color:var(--mut)}
+details.rules summary{cursor:pointer;text-align:center;color:var(--txt)}
+details.rules p{line-height:1.5;margin:8px 0}
+.overlay{position:fixed;inset:0;background:rgba(8,6,20,.82);display:none;align-items:center;justify-content:center;z-index:10;padding:16px}
+.overlay.on{display:flex}
+.box{background:var(--panel);border:2px solid var(--thick);border-radius:18px;padding:22px 18px;max-width:440px;width:100%;text-align:center;
+  box-shadow:0 0 40px rgba(139,124,255,.45)}
+.box h2{font-family:'Press Start 2P',monospace;font-size:16px;color:var(--neon);margin:0 0 14px;line-height:1.5}
+.box p{margin:6px 0;color:var(--txt)}
+.box .sub{color:var(--mut);font-size:13px}
+.recap{border-collapse:collapse;margin:14px auto;font-size:13px;width:100%}
+.recap th,.recap td{border:1px solid var(--line);padding:5px 4px}
+.recap th{color:var(--neon);font-size:11px;text-transform:uppercase}
+.spin{font-family:'Press Start 2P',monospace;color:var(--neon);font-size:13px;animation:bl 0.8s steps(2) infinite}
+@keyframes bl{50%{opacity:.25}}
+@media (max-width:480px){h1{font-size:15px}.seg button{padding:8px 9px;font-size:13px}.btn{padding:8px 10px;font-size:12px}}
+</style>
+</head>
+<body>
+<main>
+  <h1>LOGI<span>GRAMME</span></h1>
+
+  <div class="bar">
+    <div class="seg" id="levels">
+      <button data-l="facile" class="on">Facile</button>
+      <button data-l="moyen">Moyen</button>
+      <button data-l="difficile">Difficile</button>
+    </div>
+    <div class="timer" id="timer">00:00</div>
+  </div>
+
+  <details class="rules">
+    <summary>Comment jouer ?</summary>
+    <p>Chaque élément d'une catégorie correspond à <b>un seul</b> élément de chaque autre catégorie. Les indices suffisent à trouver toutes les associations, sans deviner.</p>
+    <p>Touchez une case : <b style="color:var(--x)">1 fois ✕</b> = impossible, <b style="color:var(--o)">2 fois ●</b> = certain, 3 fois = vide. Touchez un indice pour le rayer.</p>
+  </details>
+
+  <div class="btns">
+    <button class="btn" id="bUndo">↶ Annuler</button>
+    <button class="btn" id="bCheck">Vérifier</button>
+    <button class="btn" id="bHint">Indice (+30 s)</button>
+    <button class="btn" id="bSol">Solution</button>
+    <button class="btn main" id="bNew">Nouvelle énigme</button>
+  </div>
+  <label class="opt"><input type="checkbox" id="autoX" checked> Croix automatiques quand je place un ●</label>
+  <div class="msg" id="msg"></div>
+
+  <div class="layout">
+    <div class="card" id="gridcard"><div id="gridwrap"></div></div>
+    <div class="card" id="cluecard">
+      <p class="theme" id="theme"></p>
+      <p class="intro" id="intro"></p>
+      <ol class="clues" id="clues"></ol>
+    </div>
+  </div>
+</main>
+
+<div class="overlay" id="load"><div class="spin">GÉNÉRATION…</div></div>
+<div class="overlay" id="win"><div class="box">
+  <h2 id="winT">BRAVO !</h2>
+  <p id="winTime"></p>
+  <p class="sub" id="winBest"></p>
+  <div id="winRecap"></div>
+  <button class="btn main" id="bWinNew">Nouvelle énigme</button>
+  <button class="btn" id="bWinClose">Fermer</button>
+</div></div>
+
+<script>
+/*CORE*/
+const rnd=n=>Math.floor(Math.random()*n);
+const pick=a=>a[rnd(a.length)];
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+function twoDistinct(n){const a=rnd(n);let b=rnd(n-1);if(b>=a)b++;return[a,b];}
+
+const THEMES=[
+ {name:"Les voisins",intro:"Des voisins d'un même immeuble. Retrouvez qui a quel animal, où chacun travaille et quel âge il a.",
+  cats:[
+   {name:"Prénom",verb:"est",items:["Paul","Léa","Hugo","Inès","Marc"].map(l=>({l}))},
+   {name:"Animal",verb:"a",items:[{l:"le chat",s:"Chat"},{l:"le chien",s:"Chien"},{l:"le lapin",s:"Lapin"},{l:"le perroquet",s:"Perroquet"},{l:"le hamster",s:"Hamster"}]},
+   {name:"Travail",verb:"travaille",items:[{l:"à la poste",s:"Poste"},{l:"à l'hôpital",s:"Hôpital"},{l:"à la mairie",s:"Mairie"},{l:"au cinéma",s:"Cinéma"},{l:"à la gare",s:"Gare"}]},
+   {name:"Âge",verb:"a",ord:{values:[25,30,35,40,45,50,55],l:v=>v+" ans",s:v=>v+" ans",
+     less:"est plus jeune que",more:"est plus âgé que",sless:"a exactement {n} ans de moins que",smore:"a exactement {n} ans de plus que"}}
+  ]},
+ {name:"Le club de sport",intro:"Des membres d'un club omnisport. Retrouvez le sport de chacun, sa ville d'origine et son heure d'arrivée.",
+  cats:[
+   {name:"Prénom",verb:"est",items:["Nina","Théo","Sarah","Yanis","Chloé"].map(l=>({l}))},
+   {name:"Sport",verb:"pratique",items:[{l:"le judo",s:"Judo"},{l:"la boxe",s:"Boxe"},{l:"l'escalade",s:"Escalade"},{l:"la natation",s:"Natation"},{l:"le tennis",s:"Tennis"}]},
+   {name:"Ville",verb:"vient",items:[{l:"de Lyon",s:"Lyon"},{l:"de Lille",s:"Lille"},{l:"de Nantes",s:"Nantes"},{l:"de Brest",s:"Brest"},{l:"de Dijon",s:"Dijon"}]},
+   {name:"Arrivée",verb:"arrive",ord:{values:[16,17,18,19,20,21],l:v=>"à "+v+" h",s:v=>v+" h",
+     less:"arrive avant",more:"arrive après",sless:"arrive exactement {n} h avant",smore:"arrive exactement {n} h après"}}
+  ]},
+ {name:"Le restaurant",intro:"Des clients d'un restaurant végétal. Retrouvez le plat, la boisson et l'addition de chacun.",
+  cats:[
+   {name:"Prénom",verb:"est",items:["Alice","Bruno","Clara","David","Emma"].map(l=>({l}))},
+   {name:"Plat",verb:"commande",items:[{l:"le curry",s:"Curry"},{l:"le burger végétal",s:"Burger"},{l:"la salade de lentilles",s:"Salade"},{l:"le bowl au tofu",s:"Bowl"},{l:"la soupe miso",s:"Soupe"}]},
+   {name:"Boisson",verb:"boit",items:[{l:"un thé",n:"de thé",s:"Thé"},{l:"un jus d'orange",n:"de jus d'orange",s:"Jus"},{l:"une limonade",n:"de limonade",s:"Limonade"},{l:"un café",n:"de café",s:"Café"},{l:"un kombucha",n:"de kombucha",s:"Kombucha"}]},
+   {name:"Addition",verb:"paie",ord:{values:[12,14,16,18,20,22],l:v=>v+" €",s:v=>v+" €",
+     less:"paie moins que",more:"paie plus que",sless:"paie exactement {n} € de moins que",smore:"paie exactement {n} € de plus que"}}
+  ]},
+ {name:"Les vacances",intro:"Des amis partent en vacances. Retrouvez la destination, le moyen de transport et la durée du séjour de chacun.",
+  cats:[
+   {name:"Prénom",verb:"est",items:["Lucas","Jade","Tom","Manon","Rayan"].map(l=>({l}))},
+   {name:"Destination",verb:"part",items:[{l:"en Grèce",s:"Grèce"},{l:"au Japon",s:"Japon"},{l:"au Canada",s:"Canada"},{l:"en Italie",s:"Italie"},{l:"au Maroc",s:"Maroc"}]},
+   {name:"Transport",verb:"voyage",items:[{l:"en train",s:"Train"},{l:"en avion",s:"Avion"},{l:"en bus",s:"Bus"},{l:"en voiture",s:"Voiture"},{l:"à vélo",s:"Vélo"}]},
+   {name:"Durée",verb:"reste",ord:{values:[3,5,7,9,11,13],l:v=>v+" jours",s:v=>v+" j",
+     less:"reste moins longtemps que",more:"reste plus longtemps que",sless:"reste exactement {n} jours de moins que",smore:"reste exactement {n} jours de plus que"}}
+  ]},
+ {name:"Le dojo",intro:"Des pratiquants d'un dojo. Retrouvez la discipline, la couleur de ceinture et l'ancienneté de chacun.",
+  cats:[
+   {name:"Prénom",verb:"est",items:["Kenzo","Lina","Sami","Maya","Enzo"].map(l=>({l}))},
+   {name:"Discipline",verb:"pratique",items:[{l:"le judo",s:"Judo"},{l:"le jiu-jitsu",s:"Jiu-jitsu"},{l:"la lutte",s:"Lutte"},{l:"le karaté",s:"Karaté"},{l:"l'aïkido",s:"Aïkido"}]},
+   {name:"Ceinture",verb:"porte",items:[{l:"la ceinture blanche",s:"Blanche"},{l:"la ceinture bleue",s:"Bleue"},{l:"la ceinture verte",s:"Verte"},{l:"la ceinture marron",s:"Marron"},{l:"la ceinture noire",s:"Noire"}]},
+   {name:"Ancienneté",verb:"s'entraîne",ord:{values:[1,2,3,4,5,6,7],l:v=>"depuis "+v+(v>1?" ans":" an"),s:v=>v+(v>1?" ans":" an"),
+     less:"a commencé après",more:"a commencé avant",sless:"a commencé exactement {n} an(s) après",smore:"a commencé exactement {n} an(s) avant"}}
+  ]}
+];
+
+const LEVELS={
+ facile:{k:3,n:3,w:{same:4,diff:4,or:1,less:1}},
+ moyen:{k:4,n:4,w:{same:2,diff:3,or:2,less:2,step:1,pair:1}},
+ difficile:{k:4,n:5,w:{same:1,diff:3,or:2,less:3,step:2,pair:2},sameFirst:true}
+};
+
+function perms(n){const out=[],a=[...Array(n).keys()];(function r(i){if(i===n){out.push(a.slice());return;}
+  for(let j=i;j<n;j++){[a[i],a[j]]=[a[j],a[i]];r(i+1);[a[i],a[j]]=[a[j],a[i]];}})(0);return out;}
+const inverse=p=>{const q=[];p.forEach((v,e)=>q[v]=e);return q;};
+
+function inst(c,n){
+  if(c.ord){const vs=c.ord.values,s=rnd(vs.length-n+1);
+    return{...c,items:vs.slice(s,s+n).map(v=>({l:c.ord.l(v),s:c.ord.s(v),v}))};}
+  const idx=shuffle([...c.items.keys()]).slice(0,n).sort((a,b)=>a-b);
+  return{...c,items:idx.map(i=>c.items[i])};
+}
+function setup(level){
+  const cfg=LEVELS[level],n=cfg.n,k=cfg.k,th=pick(THEMES);
+  const others=shuffle(th.cats.slice(1)).slice(0,k-1).sort((a,b)=>th.cats.indexOf(a)-th.cats.indexOf(b));
+  const cats=[th.cats[0],...others].map(c=>inst(c,n));
+  const O=cats.findIndex(c=>c.ord);
+  const sol=cats.map((c,i)=>i===0?[...Array(n).keys()]:shuffle([...Array(n).keys()]));
+  const P={level,cfg,theme:th,cats,O,n,k,sol,inv:sol.map(inverse)};
+  P.PL=perms(n);P.IL=P.PL.map(inverse);
+  return P;
+}
+const itm=(P,c,e)=>[c,P.sol[c][e]];
+const ordVal=(P,e)=>P.cats[P.O].items[P.sol[P.O][e]].v;
+
+function makeClue(P,t){
+  const{k,n,O}=P;
+  if((t==='less'||t==='step')&&O<0)return null;
+  const nonO=[...Array(k).keys()].filter(c=>c!==O);
+  switch(t){
+   case'same':{const e=rnd(n);let[ca,cb]=twoDistinct(k);if(cb===0)[ca,cb]=[cb,ca];return{t,a:itm(P,ca,e),b:itm(P,cb,e)};}
+   case'diff':{let[e1,e2]=twoDistinct(n),[ca,cb]=twoDistinct(k);if(cb===0){[ca,cb]=[cb,ca];[e1,e2]=[e2,e1];}
+     return{t,a:itm(P,ca,e1),b:itm(P,cb,e2)};}
+   case'or':{const e=rnd(n);const[ca,cb]=twoDistinct(k);let e2=rnd(n-1);if(e2>=e)e2++;
+     const bc=shuffle([itm(P,cb,e),itm(P,cb,e2)]);return{t,a:itm(P,ca,e),b:bc[0],c:bc[1]};}
+   case'less':case'step':{let[e1,e2]=twoDistinct(n);if(P.sol[O][e1]>P.sol[O][e2])[e1,e2]=[e2,e1];
+     const cl={t,a:itm(P,pick(nonO),e1),b:itm(P,pick(nonO),e2),f:Math.random()<.5};
+     if(t==='step')cl.n=ordVal(P,e2)-ordVal(P,e1);return cl;}
+   case'pair':{const cc=rnd(k),oth=[...Array(k).keys()].filter(c=>c!==cc);const[e1,e2]=twoDistinct(n);
+     const cd=shuffle([itm(P,cc,e1),itm(P,cc,e2)]);return{t,a:itm(P,pick(oth),e1),b:itm(P,pick(oth),e2),c:cd[0],d:cd[1]};}
+  }
+}
+function finalize(P,cl){
+  let m=Math.max(...['a','b','c','d'].filter(x=>cl[x]).map(x=>cl[x][0]));
+  if(cl.t==='less'||cl.t==='step')m=Math.max(m,P.O);
+  cl.m=m;
+  const bc=cl.t==='or'?[cl.b,cl.c].map(String).sort():[String(cl.b),String(cl.c)];
+  cl.key=cl.t+'|'+cl.a+'|'+bc.join('|')+'|'+cl.d+'|'+cl.n;
+  return cl;
+}
+function makePool(P){
+  const types=[];for(const t in P.cfg.w)for(let i=0;i<P.cfg.w[t];i++)types.push(t);
+  const seen=new Set(),pool=[];
+  for(let i=0;i<500&&pool.length<140;i++){const cl=makeClue(P,pick(types));if(!cl)continue;finalize(P,cl);
+    if(seen.has(cl.key))continue;seen.add(cl.key);pool.push(cl);}
+  return pool;
+}
+function countSol(P,clues,limit=2){
+  const{k,O,PL,IL}=P,PERM=new Array(k),INV=new Array(k);
+  const vals=O>=0?P.cats[O].items.map(i=>i.v):null;
+  const ent=x=>x[0]===0?x[1]:INV[x[0]][x[1]];
+  const chk=cl=>{switch(cl.t){
+    case'same':return ent(cl.a)===ent(cl.b);
+    case'diff':return ent(cl.a)!==ent(cl.b);
+    case'or':{const e=ent(cl.a);return e===ent(cl.b)||e===ent(cl.c);}
+    case'less':{const ea=ent(cl.a),eb=ent(cl.b);return ea!==eb&&PERM[O][ea]<PERM[O][eb];}
+    case'step':{const ea=ent(cl.a),eb=ent(cl.b);return vals[PERM[O][eb]]-vals[PERM[O][ea]]===cl.n;}
+    case'pair':{const ea=ent(cl.a),eb=ent(cl.b),ec=ent(cl.c),ed=ent(cl.d);
+      return ea!==eb&&((ea===ec&&eb===ed)||(ea===ed&&eb===ec));}
+  }};
+  const by=[...Array(k)].map(()=>[]);clues.forEach(c=>by[c.m].push(c));
+  let cnt=0;
+  const rec=ci=>{
+    if(ci===k){cnt++;return cnt>=limit;}
+    const L=by[ci];
+    outer:for(let i=0;i<PL.length;i++){PERM[ci]=PL[i];INV[ci]=IL[i];
+      for(let j=0;j<L.length;j++)if(!chk(L[j]))continue outer;
+      if(rec(ci+1))return true;}
+    return false;
+  };
+  rec(1);return cnt;
+}
+
+const lab=(P,x)=>P.cats[x[0]].items[x[1]].l;
+const vrb=(P,x)=>P.cats[x[0]].verb;
+const pos=(P,x)=>vrb(P,x)+' '+lab(P,x);
+const neg=(P,x)=>{const v=vrb(P,x),it=P.cats[x[0]].items[x[1]];return(/^[aeiouyhâéèê]/i.test(v)?"n'":'ne ')+v+' pas '+(it.n||it.l);};
+const ref=(P,x)=>x[0]===0?lab(P,x):'la personne qui '+pos(P,x);
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function clueText(P,cl){
+  const o=P.O>=0?P.cats[P.O].ord:null;
+  switch(cl.t){
+   case'same':return cap(ref(P,cl.a))+' '+pos(P,cl.b)+'.';
+   case'diff':return cap(ref(P,cl.a))+' '+neg(P,cl.b)+'.';
+   case'or':return cap(ref(P,cl.a))+' '+vrb(P,cl.b)+' soit '+lab(P,cl.b)+', soit '+lab(P,cl.c)+'.';
+   case'less':return cl.f?cap(ref(P,cl.a))+' '+o.less+' '+ref(P,cl.b)+'.':cap(ref(P,cl.b))+' '+o.more+' '+ref(P,cl.a)+'.';
+   case'step':return cl.f?cap(ref(P,cl.a))+' '+o.sless.replace('{n}',cl.n)+' '+ref(P,cl.b)+'.'
+                         :cap(ref(P,cl.b))+' '+o.smore.replace('{n}',cl.n)+' '+ref(P,cl.a)+'.';
+   case'pair':return 'Entre '+ref(P,cl.a)+' et '+ref(P,cl.b)+", l'un "+pos(P,cl.c)+", l'autre "+pos(P,cl.d)+'.';
+  }
+}
+function generate(level){
+  for(let tries=0;tries<40;tries++){
+    const P=setup(level),pool=makePool(P);
+    let clues=[],ok=false;
+    for(const cl of pool){clues.push(cl);if(countSol(P,clues)===1){ok=true;break;}}
+    if(!ok)continue;
+    let order=shuffle(clues);
+    if(P.cfg.sameFirst)order.sort((a,b)=>(b.t==='same')-(a.t==='same'));
+    for(const cl of order){const t=clues.filter(x=>x!==cl);if(countSol(P,t)===1)clues=t;}
+    P.clues=shuffle(clues).map(cl=>({...cl,txt:clueText(P,cl).replace(/\bque ([AEIOUYÉÈaeiouyéè])/g,"qu'$1")}));
+    return P;
+  }
+  return null;
+}
+/*ENDCORE*/
+
+/* ---------- Interface ---------- */
+const $=s=>document.querySelector(s);
+let P=null,cells=new Map(),autoSrc=new Map(),hist=[],level='facile',t0=0,pen=0,tick=null,solved=false,hints=0;
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+try{const a=store.get('logi-autox');if(a!==null)$('#autoX').checked=a==='1';}catch(e){}
+
+const K=(ca,va,cb,vb)=>ca<cb?ca+'.'+va+'.'+cb+'.'+vb:cb+'.'+vb+'.'+ca+'.'+va;
+const truth=(ca,va,cb,vb)=>P.inv[ca][va]===P.inv[cb][vb];
+const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+const elapsed=()=>Math.floor((Date.now()-t0)/1000)+pen;
+const short=it=>it.s||it.l;
+function say(t,bad){const m=$('#msg');m.textContent=t||'';m.className='msg'+(bad?' bad':'');}
+
+function newGame(){
+  $('#load').classList.add('on');$('#win').classList.remove('on');
+  setTimeout(()=>{
+    P=generate(level);
+    $('#load').classList.remove('on');
+    if(!P){say("Échec de génération, réessayez.",true);return;}
+    cells=new Map();autoSrc=new Map();hist=[];solved=false;hints=0;pen=0;t0=Date.now();say('');
+    clearInterval(tick);tick=setInterval(()=>{if(!solved)$('#timer').textContent=fmt(elapsed());},1000);
+    $('#timer').textContent='00:00';
+    render();
+  },40);
+}
+
+function render(){
+  const{k,n,cats}=P;
+  const colCats=[...Array(k-1)].map((_,i)=>i+1);
+  const rowCats=[0,...[...Array(k-2)].map((_,i)=>k-1-i)];
+  let h='<table class="grid"><tr><td colspan="2" rowspan="2"></td>';
+  colCats.forEach(c=>h+=`<th class="cname" colspan="${n}">${cats[c].name}</th>`);
+  h+='</tr><tr>';
+  colCats.forEach(c=>cats[c].items.forEach((it,vj)=>h+=`<th class="vl" data-l="${c}.${vj}"><span>${short(it)}</span></th>`));
+  h+='</tr>';
+  rowCats.forEach(r=>{
+    cats[r].items.forEach((it,vi)=>{
+      h+='<tr>';
+      if(vi===0)h+=`<th class="rc" rowspan="${n}"><span>${cats[r].name}</span></th>`;
+      h+=`<th class="rl" data-l="${r}.${vi}" title="${short(it)}">${short(it)}</th>`;
+      colCats.forEach(c=>{
+        for(let vj=0;vj<n;vj++){
+          if(r===0||c<r){
+            let cl='cell';if(vj===0)cl+=' bl';if(vj===n-1)cl+=' br';if(vi===0)cl+=' bt';if(vi===n-1)cl+=' bb';
+            h+=`<td class="${cl}" data-r="${r}" data-vi="${vi}" data-c="${c}" data-vj="${vj}"></td>`;
+          }else h+='<td class="void"></td>';
+        }
+      });
+      h+='</tr>';
+    });
+  });
+  h+='</table>';
+  $('#gridwrap').innerHTML=h;
+  $('#theme').textContent=P.theme.name+' · '+({facile:'Facile',moyen:'Moyen',difficile:'Difficile'})[level];
+  $('#intro').textContent=P.theme.intro;
+  $('#clues').innerHTML=P.clues.map(c=>`<li>${c.txt}</li>`).join('');
+  fit();paint();
+}
+
+function paint(){
+  document.querySelectorAll('td.cell').forEach(td=>{
+    const st=cells.get(K(+td.dataset.r,+td.dataset.vi,+td.dataset.c,+td.dataset.vj))||0;
+    td.textContent=st===1?'✕':st===2?'●':'';
+    td.classList.toggle('x',st===1);td.classList.toggle('o',st===2);
+  });
+}
+function fit(){
+  if(!P)return;
+  const W=$('#gridwrap').clientWidth,cols=(P.k-1)*P.n,lw=W<480?62:84;
+  const cs=Math.max(22,Math.min(38,Math.floor((W-lw-20-8)/cols)));
+  document.documentElement.style.setProperty('--cs',cs+'px');
+  document.documentElement.style.setProperty('--lw',lw+'px');
+}
+window.addEventListener('resize',fit);
+
+// autoSrc : case barrée automatiquement -> ensemble des ● qui l'ont barrée
+function autoX(k,src){
+  const st=cells.get(k)||0;
+  if(st===0){cells.set(k,1);autoSrc.set(k,new Set([src]));}
+  else if(st===1&&autoSrc.has(k))autoSrc.get(k).add(src);
+}
+function setO(r,vi,c,vj){
+  const src=K(r,vi,c,vj);
+  autoSrc.delete(src);cells.set(src,2);
+  if(!$('#autoX').checked)return;
+  for(let j=0;j<P.n;j++)if(j!==vj)autoX(K(r,vi,c,j),src);
+  for(let i=0;i<P.n;i++)if(i!==vi)autoX(K(r,i,c,vj),src);
+}
+function unsetO(src){
+  for(const[k,s]of [...autoSrc]){
+    if(!s.delete(src))continue;
+    if(!s.size){autoSrc.delete(k);if(cells.get(k)===1)cells.delete(k);}
+  }
+}
+function snapshot(){
+  hist.push({c:new Map(cells),a:new Map([...autoSrc].map(([k,s])=>[k,new Set(s)]))});
+  if(hist.length>300)hist.shift();
+}
+function clearMarks(){document.querySelectorAll('td.err').forEach(td=>td.classList.remove('err'));}
+
+$('#gridwrap').addEventListener('click',e=>{
+  const td=e.target.closest('td.cell');if(!td||solved)return;
+  const r=+td.dataset.r,vi=+td.dataset.vi,c=+td.dataset.c,vj=+td.dataset.vj,key=K(r,vi,c,vj);
+  snapshot();clearMarks();say('');
+  const st=cells.get(key)||0,nx=(st+1)%3;
+  autoSrc.delete(key); // une case touchée à la main devient manuelle
+  if(nx===2)setO(r,vi,c,vj);
+  else if(nx===0){cells.delete(key);if(st===2)unsetO(key);}
+  else cells.set(key,1);
+  document.querySelectorAll('.hl').forEach(x=>x.classList.remove('hl'));
+  document.querySelectorAll(`[data-l="${r}.${vi}"],[data-l="${c}.${vj}"]`).forEach(x=>x.classList.add('hl'));
+  paint();checkWin();
+});
+$('#clues').addEventListener('click',e=>{const li=e.target.closest('li');if(li)li.classList.toggle('done');});
+
+function allPairs(f){for(let a=0;a<P.k;a++)for(let b=a+1;b<P.k;b++)for(let va=0;va<P.n;va++)for(let vb=0;vb<P.n;vb++)f(a,va,b,vb);}
+function checkWin(){
+  let ok=true;
+  allPairs((a,va,b,vb)=>{const st=cells.get(K(a,va,b,vb))||0,t=truth(a,va,b,vb);if((t&&st!==2)||(!t&&st===2))ok=false;});
+  if(ok)win(false);
+}
+function recap(){
+  let h='<table class="recap"><tr>'+P.cats.map(c=>`<th>${c.name}</th>`).join('')+'</tr>';
+  for(let e=0;e<P.n;e++)h+='<tr>'+P.cats.map((c,i)=>`<td>${short(c.items[P.sol[i][e]])}</td>`).join('')+'</tr>';
+  return h+'</table>';
+}
+function win(shown){
+  solved=true;clearInterval(tick);
+  const s=elapsed();$('#timer').textContent=fmt(s);
+  if(shown){say('Solution affichée.');return;}
+  const bk='logi-best-'+level,best=+store.get(bk)||0,rec=!best||s<best;
+  if(rec)store.set(bk,s);
+  $('#winT').textContent='BRAVO !';
+  $('#winTime').innerHTML=`Résolu en <b>${fmt(s)}</b>`+(hints?` (${hints} indice${hints>1?'s':''})`:'');
+  $('#winBest').textContent=rec?'Nouveau record pour ce niveau !':'Record : '+fmt(best);
+  $('#winRecap').innerHTML=recap();
+  $('#win').classList.add('on');
+}
+
+$('#bUndo').onclick=()=>{if(solved||!hist.length)return;{const h=hist.pop();cells=h.c;autoSrc=h.a;}clearMarks();paint();};
+$('#bCheck').onclick=()=>{
+  if(!P||solved)return;clearMarks();let errs=0;
+  document.querySelectorAll('td.cell').forEach(td=>{
+    const r=+td.dataset.r,vi=+td.dataset.vi,c=+td.dataset.c,vj=+td.dataset.vj;
+    const st=cells.get(K(r,vi,c,vj))||0,t=truth(r,vi,c,vj);
+    if((st===2&&!t)||(st===1&&t)){td.classList.add('err');errs++;}
+  });
+  say(errs?errs+' erreur'+(errs>1?'s':'')+' dans la grille.':"Aucune erreur pour l'instant.",errs>0);
+};
+$('#bHint').onclick=()=>{
+  if(!P||solved)return;
+  const cand=[];allPairs((a,va,b,vb)=>{if(truth(a,va,b,vb)&&cells.get(K(a,va,b,vb))!==2)cand.push([a,va,b,vb]);});
+  if(!cand.length)return;
+  const pri=cand.filter(x=>x[0]===0),[a,va,b,vb]=pick(pri.length?pri:cand);
+  snapshot();clearMarks();
+  // placer dans le bon sens d'affichage (ligne = catégorie 0 ou la plus haute)
+  const r=a===0?a:b,c=a===0?b:a,vi=a===0?va:vb,vj=a===0?vb:va;
+  setO(r,vi,c,vj);hints++;pen+=30;paint();
+  const td=document.querySelector(`td.cell[data-r="${r}"][data-vi="${vi}"][data-c="${c}"][data-vj="${vj}"]`);
+  if(td){td.classList.remove('flash');void td.offsetWidth;td.classList.add('flash');}
+  say('Indice : '+short(P.cats[a].items[va])+' ↔ '+short(P.cats[b].items[vb])+' (+30 s)');
+  checkWin();
+};
+$('#bSol').onclick=()=>{
+  if(!P||solved)return;if(!confirm('Afficher la solution ? La partie ne comptera pas.'))return;
+  autoSrc=new Map();allPairs((a,va,b,vb)=>cells.set(K(a,va,b,vb),truth(a,va,b,vb)?2:1));clearMarks();paint();win(true);
+};
+$('#bNew').onclick=newGame;$('#bWinNew').onclick=newGame;
+$('#bWinClose').onclick=()=>$('#win').classList.remove('on');
+$('#autoX').onchange=e=>store.set('logi-autox',e.target.checked?'1':'0');
+document.querySelectorAll('#levels button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#levels button').forEach(x=>x.classList.toggle('on',x===b));level=b.dataset.l;newGame();
+});
+newGame();
+</script>
+<a href="index.html" id="arcadeBack" aria-label="Retour à SOArcade" style="position:fixed;left:calc(env(safe-area-inset-left,0px) + 8px);bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:9999;font:600 12px/1 system-ui,sans-serif;color:#fff;background:rgba(10,10,20,.78);border:1px solid rgba(255,255,255,.35);padding:8px 10px;text-decoration:none;border-radius:4px">◀ Menu</a>
+</body>
+</html>

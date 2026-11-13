@@ -1,0 +1,728 @@
+<!doctype html><html><head><meta name="robots" content="noindex"><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Héli Secours</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<style>
+/* Layout : un écran de borne d'arcade centré, une barre d'aide dessous. Monde unique : console 8 bits, palette Master System. */
+:root{
+  --bg:#07080f; --panel:#10132a; --line:#2a3060; --fg:#e8f0ff; --dim:#8a93b8;
+  --accent:#ffd23f; --hot:#ff4f6d; --ok:#38e07b; --veil:rgba(5,6,15,.88); --glow:rgba(80,120,255,.22);
+  --pix:'Press Start 2P', ui-monospace, 'Courier New', monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--pix);margin:0;padding-inline:16px;padding-block:16px;box-sizing:border-box}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:12px;align-items:center}
+.screen{position:relative;container-type:inline-size;width:min(100%, calc((100vh - 130px) * 16 / 9));max-width:100%;aspect-ratio:16/9;background:var(--bg);border:3px solid var(--line);box-shadow:0 0 28px var(--glow)}
+canvas{display:block;width:100%;height:100%;image-rendering:crisp-edges;image-rendering:pixelated;touch-action:none;user-select:none;-webkit-user-select:none;cursor:pointer}
+.ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.1em;padding:1em;background:var(--veil);text-align:center;overflow:auto;font-size:clamp(7px,1.45cqw,13px);line-height:1.7}
+.ov[hidden]{display:none}
+.ov h1{font-size:2.8em;line-height:1.25;margin:0;color:var(--accent);text-shadow:.14em .14em 0 var(--hot);letter-spacing:.04em;text-wrap:balance}
+.ov h2{font-size:1.6em;line-height:1.3;margin:0;color:var(--accent)}
+.ov h2.bad{color:var(--hot)}
+.ov p{margin:0;max-width:40em}
+.note{color:var(--dim);font-size:.85em}
+.row{display:flex;gap:1em;flex-wrap:wrap;justify-content:center}
+.sum{list-style:none;margin:0;padding:0;display:grid;gap:.35em;width:min(24em,100%)}
+.sum li{display:flex;justify-content:space-between;gap:2em}
+.sum b{color:var(--ok);font-weight:normal;font-variant-numeric:tabular-nums}
+.cash b{color:var(--accent);font-weight:normal}
+.shop{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8em;width:min(38em,100%)}
+.btn{font:inherit;font-family:var(--pix);color:var(--fg);background:var(--panel);border:2px solid var(--accent);padding:.8em 1em;cursor:pointer;line-height:1.4}
+.btn:hover:not([disabled]),.btn:focus-visible{background:var(--accent);color:var(--bg);outline:none}
+.btn[disabled]{border-color:var(--line);color:var(--dim);cursor:not-allowed}
+.btn.up{display:flex;flex-direction:column;gap:.5em;align-items:center;min-width:0}
+.up .v{color:var(--ok)} .up .c{color:var(--accent)}
+.btn.up:hover:not([disabled]) span,.btn.up:focus-visible span{color:var(--bg)}
+.btn.up[disabled] span{color:var(--dim)}
+.prim{border-color:var(--ok)}
+.prim:hover,.prim:focus-visible{background:var(--ok)}
+.bar{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;align-items:center;width:100%}
+.help{margin:0;color:var(--dim);font-size:9px;line-height:1.9;text-align:center;min-width:0}
+.small{font-size:9px;padding:.7em .9em}
+@media (max-width:480px){.help{font-size:8px}}
+</style>
+
+<div class="wrap">
+  <div class="screen" id="screen">
+    <canvas id="cv" aria-label="Zone de jeu Héli Secours"></canvas>
+    <div class="ov" id="ov"></div>
+  </div>
+  <div class="bar">
+    <p class="help">MAINTENIR ESPACE, CLIC OU DOIGT : MONTER ET AVANCER · RELÂCHER : DESCENDRE · P : PAUSE</p>
+    <button class="btn small" id="snd" type="button">SON : OUI</button>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const W = 320, H = 180;
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+cv.width = W; cv.height = H;
+ctx.imageSmoothingEnabled = false;
+const ov = document.getElementById('ov');
+const sndBtn = document.getElementById('snd');
+const FONT = "8px 'Press Start 2P', monospace";
+const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const C = {
+  hud:'#000000', text:'#FFFFFF', dim:'#555555', warn:'#FF5555', ok:'#55FF55', money:'#FFFF00',
+  person:'#FFFF00', heli:'#FFFFFF', stripe:'#FF0000', spark:'#FFAA00', bird:'#FFFFFF'
+};
+
+/* ---------- Sauvegarde ---------- */
+const KEY = 'heli-secours-v1';
+const fresh = () => ({ lvl:1, money:0, up:{cap:0, eng:0, arm:0}, best:1, sound:true });
+let save = fresh();
+function load(){ try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.up) save = Object.assign(fresh(), s, { up:Object.assign(fresh().up, s.up) }); } catch(e){} }
+function store(){ try { localStorage.setItem(KEY, JSON.stringify(save)); } catch(e){} }
+
+/* ---------- Améliorations ---------- */
+const UPG = {
+  cap:{ name:'PLACES',   max:4, cost:l => 150 + l*110, val:l => 2 + l },
+  eng:{ name:'MOTEUR',   max:5, cost:l => 120 + l*90,  val:l => l + 1 },
+  arm:{ name:'BLINDAGE', max:4, cost:l => 130 + l*100, val:l => 2 + l }
+};
+const cap = () => UPG.cap.val(save.up.cap);
+const hpMax = () => UPG.arm.val(save.up.arm);
+function stats(){ const e = save.up.eng; return { thrust:215 + e*14, grav:190, acc:110 + e*14, drag:45, maxV:56 + e*8, maxUp:-(95 + e*5), maxDown:115, safe:105, assist:60 }; }
+
+/* ---------- Outils ---------- */
+function rng(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const clamp = (v,a,b) => v < a ? a : v > b ? b : v;
+const hitRect = (ax,ay,aw,ah,bx,by,bw,bh) => ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+const isCave = n => n >= 4 && (n - 4) % 3 === 0;
+
+/* ---------- Construction d'un niveau ---------- */
+const STEP = 4;
+const BASE = { x0:56, x1:106, y:160 };
+function buildLevel(n){
+  const r = rng(n * 7919 + 13);
+  const L = Math.min(1300 + n*280, 4200);
+  const N = Math.ceil(L / STEP) + 2;
+  const g = new Float32Array(N);
+  const amp = Math.min(18 + n*6, 52), seg = Math.max(28, 48 - n*2);
+  const pts = []; for (let i = 0; i <= L/seg + 3; i++) pts.push(r());
+  for (let i = 0; i < N; i++){
+    const f = i*STEP/seg, k = Math.floor(f), t = f - k, s = (1 - Math.cos(t*Math.PI)) / 2;
+    g[i] = 166 - (pts[k]*(1-s) + pts[k+1]*s) * amp;
+  }
+  const flat = (x0,x1,y) => { for (let i = Math.max(0, Math.floor(x0/STEP)); i <= Math.ceil(x1/STEP) && i < N; i++) g[i] = y; };
+  flat(0, 116, BASE.y);
+
+  const nPads = Math.min(3 + n, 9), pads = [], span = (L - 120) - 260;
+  for (let p = 0; p < nPads; p++){
+    const cx = Math.round(260 + span*(p + 0.5)/nPads + (r() - 0.5)*(span/nPads)*0.5);
+    const y = Math.round(g[Math.floor(cx/STEP)]), w = 34;
+    flat(cx - w/2 - 6, cx + w/2 + 6, y);
+    pads.push({ x:cx - w/2, w, y, people:1 + Math.floor(r()*Math.min(3, 1.5 + n*0.5)) });
+  }
+
+  const cave = isCave(n);
+  let c = null;
+  if (cave){
+    c = new Float32Array(N);
+    const cp = []; for (let i = 0; i <= L/36 + 3; i++) cp.push(r());
+    for (let i = 0; i < N; i++){
+      const f = i*STEP/36, k = Math.floor(f), t = f - k, s = (1 - Math.cos(t*Math.PI)) / 2;
+      c[i] = Math.min(18 + (cp[k]*(1-s) + cp[k+1]*s)*44, g[i] - 74);
+    }
+    const open = (x0,x1) => { for (let i = Math.max(0, Math.floor(x0/STEP)); i <= Math.ceil(x1/STEP) && i < N; i++) c[i] = Math.min(c[i], g[i] - 84); };
+    open(0, 130); pads.forEach(p => open(p.x - 20, p.x + p.w + 20));
+  }
+
+  const gAt = x => { const f = clamp(x/STEP, 0, N - 2), i = Math.floor(f), t = f - i; return g[i]*(1-t) + g[i+1]*t; };
+  const cAt = x => { if (!c) return -99; const f = clamp(x/STEP, 0, N - 2), i = Math.floor(f), t = f - i; return c[i]*(1-t) + c[i+1]*t; };
+
+  const trees = [], density = Math.min(0.35 + n*0.08, 0.8);
+  for (let x = 140; x < L - 20; x += 26 + Math.floor(r()*40)){
+    if (r() > density) continue;
+    if (pads.some(p => x > p.x - 16 && x < p.x + p.w + 16)) continue;
+    trees.push({ x, h:cave ? 10 + Math.floor(r()*(5 + Math.min(n, 6))) : (r() < 0.35 + Math.min(n, 6)*0.06 ? 18 : 15), y:Math.round(gAt(x)) });
+  }
+
+  const birds = [];
+  if (n >= 2){
+    const nb = Math.min(2 + (n - 2)*2, 14);
+    for (let b = 0; b < nb; b++){
+      const x = 320 + r()*(L - 420), gy = gAt(x), top = cave ? cAt(x) + 14 : 26;
+      const y = top + r()*Math.max(8, (gy - 38) - top);
+      birds.push({ x0:x, x, y0:y, y, range:30 + r()*60, spd:(14 + r()*14)*(r() < .5 ? -1 : 1), ph:r()*6.28, alive:true });
+    }
+  }
+  const o = { n, L, pads, trees, birds, cave, planes:n >= 3 && !cave, gAt, cAt, hasCeil:!!c };
+  o.canvas = paintLevel(o);
+  return o;
+}
+
+/* ---------- Audio ---------- */
+let actx = null;
+function ensureAudio(){
+  if (!actx){ try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ actx = null; } }
+  if (actx && actx.state === 'suspended') actx.resume().catch(() => {});
+}
+function tone(f, d, type = 'square', vol = 0.05, slide = 0){
+  if (!save.sound || !actx) return;
+  const t = actx.currentTime, o = actx.createOscillator(), gn = actx.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t + d);
+  gn.gain.setValueAtTime(vol, t); gn.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(gn).connect(actx.destination); o.start(t); o.stop(t + d + 0.02);
+}
+function noise(d){
+  if (!save.sound || !actx) return;
+  const b = actx.createBuffer(1, Math.floor(actx.sampleRate*d), actx.sampleRate), data = b.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random()*2 - 1)*(1 - i/data.length);
+  const s = actx.createBufferSource(), gn = actx.createGain(); gn.gain.value = 0.14; s.buffer = b; s.connect(gn).connect(actx.destination); s.start();
+}
+function sfx(k){
+  switch(k){
+    case 'board': tone(660,.07); setTimeout(() => tone(880,.07), 70); break;
+    case 'cash':  tone(988,.06); setTimeout(() => tone(1319,.1), 60); break;
+    case 'hit':   tone(170,.25,'sawtooth',.08,-110); break;
+    case 'land':  tone(220,.06,'triangle',.07); break;
+    case 'boom':  noise(.7); break;
+    case 'level': [523,659,784,1047].forEach((f,i) => setTimeout(() => tone(f,.12), i*110)); break;
+    case 'warn':  tone(1250,.05,'square',.03); break;
+    case 'buy':   tone(784,.06); setTimeout(() => tone(1175,.09), 60); break;
+  }
+}
+
+/* ---------- État du jeu ---------- */
+let state = 'title', lvl, heli, planes = [], warns = [], parts = [], floats = [], stars = [];
+let T = 0, cam = 0, shake = 0, introT = 0, planeT = 4, doneT = 0, crashT = 0, levelCash = 0, lastShop = null;
+const input = { hold:false };
+
+function newHeli(){ return { x:81, y:BASE.y - 4, vx:0, vy:0, dir:1, hp:hpMax(), pax:0, landed:true, inv:0, boardT:0, dead:false }; }
+const remaining = () => lvl.pads.reduce((s,p) => s + p.people, 0);
+
+function startLevel(n){
+  lvl = buildLevel(n); heli = newHeli();
+  planes = []; warns = []; parts = []; floats = [];
+  levelCash = 0; planeT = 4; introT = 3.2; doneT = 0; crashT = 0; cam = 0; shake = 0;
+  input.hold = false; state = 'play'; hideOv(); last = performance.now();
+}
+
+function landZone(x){
+  if (x - 5 >= BASE.x0 && x + 5 <= BASE.x1) return { kind:'base', y:BASE.y };
+  for (const p of lvl.pads) if (x - 5 >= p.x && x + 5 <= p.x + p.w) return { kind:'pad', p, y:p.y };
+  return null;
+}
+function targetDir(){
+  const h = heli;
+  if (h.pax >= cap() || remaining() === 0) return -1;
+  let best = null, bd = 1e9;
+  for (const p of lvl.pads) if (p.people > 0){ const d = Math.abs(p.x + p.w/2 - h.x); if (d < bd){ bd = d; best = p; } }
+  if (!best) return -1;
+  const dx = best.x + best.w/2 - h.x;
+  return Math.abs(dx) < 24 ? h.dir : Math.sign(dx);
+}
+function burst(x, y, col, n, spd = 60){
+  for (let i = 0; i < n; i++){ const a = Math.random()*Math.PI*2, v = spd*(0.3 + Math.random()); parts.push({ x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v - 20, t:0.5 + Math.random()*0.6, col }); }
+}
+function float(x, y, s, col){ floats.push({ x, y, s, col, t:1.1 }); }
+
+function hit(){
+  const h = heli;
+  if (h.inv > 0 || h.dead) return;
+  h.hp--; h.inv = 1.3; shake = reduceMotion ? 0 : 0.35;
+  sfx('hit'); burst(h.x, h.y, C.spark, 8);
+  if (h.hp <= 0) crash();
+}
+function crash(){
+  const h = heli; h.dead = true; state = 'crash'; crashT = 0; input.hold = false;
+  sfx('boom'); burst(h.x, h.y, C.spark, 30, 90); burst(h.x, h.y, C.heli, 14, 70); burst(h.x, h.y, C.stripe, 10, 70);
+  shake = reduceMotion ? 0 : 0.6;
+}
+function levelComplete(){
+  const n = lvl.n, bonus = 25*n, perfect = heli.hp === hpMax();
+  const total = levelCash + bonus + (perfect ? 50 : 0);
+  save.money += total; save.lvl = n + 1; save.best = Math.max(save.best, n + 1); store();
+  sfx('level'); state = 'shop';
+  showShop('done', { n, cash:levelCash, bonus, perfect });
+}
+
+/* ---------- Mise à jour ---------- */
+function update(dt){
+  const h = heli, st = stats();
+  if (introT > 0) introT -= dt;
+  if (h.inv > 0) h.inv -= dt;
+
+  h.dir = targetDir();
+  const hold = input.hold;
+
+  if (h.landed && hold){ h.landed = false; h.vy = -40; }
+  if (!h.landed){
+    if (hold){
+      h.vy -= st.thrust*dt;
+      h.vx += h.dir*st.acc*dt;
+      if (h.vx !== 0 && Math.sign(h.vx) !== h.dir) h.vx += h.dir*st.acc*dt;
+    } else {
+      h.vy += st.grav*dt;
+      const d = st.drag*dt; h.vx = Math.abs(h.vx) <= d ? 0 : h.vx - Math.sign(h.vx)*d;
+    }
+    h.vx = clamp(h.vx, -st.maxV, st.maxV);
+    h.vy = clamp(h.vy, st.maxUp, st.maxDown);
+    // Aide à l'atterrissage : au-dessus d'une zone jaune, la descente est freinée près du sol
+    const zAssist = landZone(h.x);
+    if (zAssist && !hold && zAssist.y - (h.y + 4) < 26 && h.vy > st.assist) h.vy = Math.max(st.assist, h.vy - 400*dt);
+    h.x += h.vx*dt; h.y += h.vy*dt;
+  } else { h.vx = 0; h.vy = 0; }
+
+  if (h.x < 8 || h.x > lvl.L - 8){ h.x = clamp(h.x, 8, lvl.L - 8); h.vx = 0; }
+  if (!lvl.hasCeil && h.y < 22){ h.y = 22; if (h.vy < 0) h.vy = 0; }
+
+  // Sol
+  const gy = Math.min(lvl.gAt(h.x - 6), lvl.gAt(h.x), lvl.gAt(h.x + 6));
+  if (!h.landed && h.y + 4 >= gy){
+    const z = landZone(h.x);
+    if (z && h.vy <= st.safe){ h.y = z.y - 4; h.vy = 0; h.vx = 0; h.landed = true; h.boardT = 0; sfx('land'); }
+    else {
+      if (z) float(h.x, h.y - 14, 'TROP VITE', C.warn);
+      hit(); if (h.dead) return;
+      h.y = gy - 6; h.vy = -95; h.vx *= 0.4;
+    }
+  }
+  // Plafond (grotte)
+  if (lvl.hasCeil){
+    const cy = Math.max(lvl.cAt(h.x - 6), lvl.cAt(h.x), lvl.cAt(h.x + 6));
+    if (h.y - 4 <= cy){ hit(); if (h.dead) return; h.y = cy + 6; h.vy = 60; }
+  }
+  // Arbres / stalagmites
+  for (const t of lvl.trees){
+    if (Math.abs(t.x - h.x) > 20) continue;
+    if (hitRect(h.x - 6, h.y - 3, 12, 7, t.x - 3, t.y - t.h, 7, t.h)){ hit(); if (h.dead) return; h.vy = -80; }
+  }
+  // Oiseaux
+  for (const b of lvl.birds){
+    if (!b.alive) continue;
+    b.ph += dt; b.x += b.spd*dt;
+    if (Math.abs(b.x - b.x0) > b.range){ b.spd = -b.spd; b.x = b.x0 + Math.sign(b.x - b.x0)*b.range; }
+    b.y = b.y0 + Math.sin(b.ph*3)*4;
+    if (hitRect(h.x - 6, h.y - 3, 12, 7, b.x - 3, b.y - 1, 7, 3)){ b.alive = false; burst(b.x, b.y, C.bird, 8, 40); hit(); if (h.dead) return; }
+  }
+  // Avions
+  if (lvl.planes){
+    planeT -= dt;
+    if (planeT <= 0){
+      const side = h.dir > 0 ? 1 : -1;
+      const top = 24, bottom = Math.min(80, lvl.gAt(cam + W/2) - 46);
+      if (bottom > top){ warns.push({ side, y:Math.round(top + Math.random()*(bottom - top)), t:0.9 }); sfx('warn'); }
+      planeT = Math.max(2.2, 7.5 - lvl.n*0.45) + Math.random()*2;
+    }
+  }
+  for (let i = warns.length - 1; i >= 0; i--){
+    const w = warns[i]; w.t -= dt;
+    if (w.t <= 0){ planes.push({ x:cam + (w.side > 0 ? W + 20 : -20), y:w.y, vx:-w.side*112 }); warns.splice(i, 1); }
+  }
+  for (let i = planes.length - 1; i >= 0; i--){
+    const p = planes[i]; p.x += p.vx*dt;
+    if (p.x < cam - 60 || p.x > cam + W + 60){ planes.splice(i, 1); continue; }
+    if (hitRect(h.x - 6, h.y - 3, 12, 7, p.x - 8, p.y - 2, 16, 4)){ hit(); if (h.dead) return; }
+  }
+
+  // Embarquement / débarquement
+  if (h.landed){
+    const z = landZone(h.x);
+    if (z){
+      h.boardT += dt;
+      if (z.kind === 'pad' && z.p.people > 0 && h.pax < cap()){
+        if (h.boardT > 0.5){ h.boardT = 0; z.p.people--; h.pax++; sfx('board'); float(h.x, h.y - 12, '+1', C.person); if (h.pax >= cap() && z.p.people > 0) float(h.x, h.y - 22, 'PLEIN', C.warn); }
+      } else if (z.kind === 'base' && h.pax > 0){
+        if (h.boardT > 0.35){ h.boardT = 0; h.pax--; levelCash += 50; sfx('cash'); float(h.x, h.y - 12, '+$50', C.money); }
+      } else h.boardT = 0;
+      if (z.kind === 'base' && h.pax === 0 && remaining() === 0){ doneT += dt; if (doneT > 0.8) levelComplete(); }
+    }
+  }
+
+  // Caméra
+  const target = h.x - (h.dir > 0 ? W*0.35 : W*0.65);
+  cam += (target - cam)*Math.min(1, dt*3);
+  cam = clamp(cam, 0, lvl.L - W);
+}
+
+function stepFx(dt){
+  T += dt; if (shake > 0) shake -= dt;
+  for (let i = parts.length - 1; i >= 0; i--){ const p = parts[i]; p.t -= dt; p.vy += 140*dt; p.x += p.vx*dt; p.y += p.vy*dt; if (p.t <= 0) parts.splice(i, 1); }
+  for (let i = floats.length - 1; i >= 0; i--){ const f = floats[i]; f.t -= dt; f.y -= 14*dt; if (f.t <= 0) floats.splice(i, 1); }
+  if (state === 'crash'){ crashT += dt; if (crashT > 1.3){ state = 'shop'; showShop('crash', { n:lvl.n }); } }
+}
+
+/* ---------- Dessin (style Master System : palette 64 couleurs, sprites détourés, décors en couches) ---------- */
+const U32 = {};
+function u32(hex){ if (U32[hex] !== undefined) return U32[hex]; const n = parseInt(hex.slice(1), 16); return U32[hex] = ((255 << 24) | ((n & 255) << 16) | (((n >> 8) & 255) << 8) | ((n >> 16) & 255)) >>> 0; }
+function hash(a, b){ let n = (a*374761393 + b*668265263) | 0; n = Math.imul(n ^ (n >>> 13), 1274126177); return (n ^ (n >>> 16)) >>> 0; }
+function mkCanvas(w, h){ const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = false; return [c, x]; }
+
+const PAL = {
+  k:'#000000', w:'#FFFFFF', g:'#AAAAAA', G:'#555555', r:'#FF0000', R:'#AA0000',
+  b:'#0055FF', c:'#AAFFFF', B:'#00AAFF', y:'#FFFF00', Y:'#FFAA00', s:'#FFAA55', n:'#550000', o:'#AA5500',
+  l:'#55FF55', e:'#00AA00', E:'#005500', p:'#FF55AA', d:'#0000AA'
+};
+function sprite(rows, pal){
+  const w = Math.max(...rows.map(r => r.length)), h = rows.length;
+  const [c, x] = mkCanvas(w, h);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++){ const col = pal[rows[j][i]]; if (col){ x.fillStyle = col; x.fillRect(i, j, 1, 1); } }
+  const [f, fx] = mkCanvas(w, h); fx.translate(w, 0); fx.scale(-1, 1); fx.drawImage(c, 0, 0);
+  return { c, f, w, h };
+}
+function blit(s, sx, sy, ax, ay, flip){ ctx.drawImage(flip ? s.f : s.c, flip ? sx - (s.w - 1 - ax) : sx - ax, sy - ay); }
+
+const SPR = {};
+function buildSprites(){
+  SPR.heli = sprite([
+    '..........................',
+    '..........................',
+    '..............kk..........',
+    'kk.........kkkkkkkk.......',
+    'kwk.......kwwwwwwkbbbk....',
+    'kwwk.....kwwwwwwwkbccbk...',
+    'kwwwkkkkkwwwwwwwwkbbbbbk..',
+    'kkwwwwwwwwrrrrrrrrrrrrrrk.',
+    '.kkkkkkkkkwwwwwwwwwwwwwk..',
+    '..........kkwwwwwwwwwkk...',
+    '............k.....k.......',
+    '..........gggggggggggg....'
+  ], PAL);
+  const person = (shirt, up) => sprite(up ? [
+    '..nnn..', 's.sss.s', 'sXXXXXs', '.XXXXX.', '..XXX..', '..bbb..', '..b.b..', '..b.b..', '.kk.kk.'
+  ] : [
+    '..nnn..', '..sss..', '.XXXXX.', 'sXXXXXs', 's.XXX.s', '..bbb..', '..b.b..', '..b.b..', '.kk.kk.'
+  ], Object.assign({}, PAL, { X:shirt, b:'#0000AA' }));
+  SPR.people = ['#FF0000', '#FF55AA', '#00AAFF'].map(col => [person(col, true), person(col, false)]);
+  SPR.bird = [
+    sprite(['w.......w', 'kw.....wk', '.kwwkwwk.', '...kYk...'], PAL),
+    sprite(['.........', '...www...', '.wwwkwww.', 'wk.kYk.kw'], PAL)
+  ];
+  SPR.plane = sprite([
+    'kk........................',
+    'kgk.......................',
+    'kggk...........kkkk.......',
+    'kgggkkkkkkkkkkkwwwwkkk....',
+    'kgwwwwwwwwwwwwwwbwbwbwgk..',
+    'kkrrrrrrrrrrrrrrrrrrrrrgk.',
+    '.kgggggggggggggggggggggk..',
+    '........kgggggk...........',
+    '.........kkkkk............'
+  ], PAL);
+  const top = ['.....k.....', '....klk....', '....kek....', '...kleek...', '...keeek...', '..kleeeek..', '...kkekk...'];
+  const bottom = ['..kleeeek..', '.kleeeeeek.', '.keeeeeeek.', 'kleeeeeeeek', 'kkkkkkkkkkk', '....knk....', '....kok....', '....kkk....'];
+  SPR.pine15 = sprite(top.concat(bottom), PAL);
+  SPR.pine18 = sprite(top.concat(['..kleeeek..', '.kleeeeeek.', '.kkkeeekkk.'], bottom), PAL);
+
+  // Nuages
+  SPR.clouds = [ [46, 14], [30, 11], [62, 16] ].map(([w, h], idx) => {
+    const [c, x] = mkCanvas(w, h), r = rng(77 + idx), blobs = [];
+    for (let i = 0; i < 5 + idx; i++) blobs.push({ cx:6 + r()*(w - 12), cy:h*0.55 + (r() - 0.5)*h*0.3, rr:h*0.32 + r()*h*0.25 });
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++){
+      let inside = false, lowest = false;
+      for (const b of blobs){ const dx = i - b.cx, dy = j - b.cy; if (dx*dx + dy*dy <= b.rr*b.rr){ inside = true; if (dy > b.rr*0.35) lowest = true; } }
+      if (!inside || j >= h - 1) continue;
+      x.fillStyle = lowest ? '#AAFFFF' : '#FFFFFF'; x.fillRect(i, j, 1, 1);
+    }
+    return c;
+  });
+
+  // Couches de fond (montagnes lointaines, collines) répétées tous les 640 px
+  const LW = 640;
+  const layer = (seed, base, amp, segW, fill, sharp) => {
+    const [c, x] = mkCanvas(LW, H), img = x.createImageData(LW, H), buf = new Uint32Array(img.data.buffer), r = rng(seed);
+    const pts = []; const nPts = Math.ceil(LW/segW); for (let i = 0; i < nPts; i++) pts.push(r()); pts.push(pts[0]);
+    const tops = new Int16Array(LW);
+    for (let i = 0; i < LW; i++){
+      const f = i/segW, k = Math.floor(f), t = f - k, s = sharp ? t : (1 - Math.cos(t*Math.PI))/2;
+      tops[i] = Math.floor(base - (pts[k]*(1 - s) + pts[k + 1]*s)*amp);
+    }
+    for (let i = 0; i < LW; i++){
+      const top = tops[i], slope = tops[(i + 1) % LW] - top;
+      for (let j = Math.max(0, top); j < H; j++) buf[j*LW + i] = u32(fill(i, j, j - top, top, slope));
+    }
+    x.putImageData(img, 0, 0); return c;
+  };
+  SPR.mountains = layer(11, 136, 74, 46, (i, j, d, top, slope) => {
+    if (top < 96 && d < 4 + (hash(i, 3) % 3)) return d === 0 ? '#FFFFFF' : (slope > 0 ? '#AAAAFF' : '#FFFFFF');
+    if (d === 0) return '#AAAAFF';
+    return slope > 0 ? '#5555AA' : '#5555FF';
+  }, true);
+  SPR.hills = layer(23, 152, 24, 56, (i, j, d) => {
+    if (d === 0) return '#55FFAA';
+    if (d < 3) return '#00AA55';
+    return (hash(i >> 1, j >> 1) % 17 === 0) ? '#005500' : '#00AA55';
+  });
+  SPR.caveFar = layer(41, 150, 50, 40, (i, j, d) => d === 0 ? '#0000AA' : '#000055');
+  SPR.caveTop = (() => { const [c, x] = mkCanvas(LW, H), r = rng(57); x.fillStyle = '#000055';
+    for (let i = 0; i < LW; i += 4){ const h = 20 + Math.floor(r()*40); x.fillRect(i, 0, 4, h); } return c; })();
+  SPR.LW = LW;
+  SPR.cloudList = []; const cr = rng(99);
+  for (let i = 0; i < 9; i++) SPR.cloudList.push({ x:cr()*900, y:20 + Math.floor(cr()*50), k:Math.floor(cr()*3) });
+}
+
+/* Terrain précalculé pour tout le niveau (sol, plafond, base, zones, arbres) */
+function dirtCol(x, y, d){
+  if (d === 0) return '#005500';
+  if (d <= 2) return '#55FF55';
+  if (d === 3) return (x % 3 === 0) ? '#55FF55' : '#00AA00';
+  if (d === 4) return (x % 4 === 1) ? '#00AA00' : '#AA5500';
+  const deep = d > 30, lx = x & 7, ly = y & 7, h = hash(x >> 3, y >> 3);
+  if (h % 4 === 0 && lx >= 2 && lx <= 5 && ly >= 2 && ly <= 4) return ly === 2 ? '#FFAA55' : ly === 4 ? '#550000' : '#AA5555';
+  if ((x*7 + y*13) % 23 === 0) return deep ? '#AA5500' : '#550000';
+  return deep ? '#550000' : '#AA5500';
+}
+function rockCol(x, y, d){
+  if (d === 0) return '#000000';
+  if (d <= 2) return '#AAAAAA';
+  const h = hash(x >> 2, y >> 2);
+  if (h % 13 === 0) return '#000000';
+  if (h % 7 === 0) return '#AAAAAA';
+  return ((x >> 3) + (y >> 3)) % 2 ? '#555555' : '#550055';
+}
+function paintLevel(o){
+  const L = o.L, [lc, lx] = mkCanvas(L, H), img = lx.createImageData(L, H), buf = new Uint32Array(img.data.buffer);
+  for (let x = 0; x < L; x++){
+    const gy = Math.floor(o.gAt(x));
+    for (let y = Math.max(0, gy); y < H; y++) buf[y*L + x] = u32(o.cave ? rockCol(x, y, y - gy) : dirtCol(x, y, y - gy));
+    if (o.hasCeil){ const cy = Math.floor(o.cAt(x)); for (let y = 0; y <= cy && y < H; y++) buf[y*L + x] = u32(rockCol(x, y, cy - y)); }
+  }
+  lx.putImageData(img, 0, 0);
+  const R = (x, y, w, h, col) => { lx.fillStyle = col; lx.fillRect(x, y, w, h); };
+
+  // Base : hangar, enseigne, drapeau, hélistation
+  R(9, 143, 41, 17, '#000000'); R(10, 144, 39, 16, '#AAAAAA');
+  for (let x = 12; x < 48; x += 4) R(x, 144, 1, 16, '#555555');
+  R(8, 137, 43, 7, '#000000'); R(9, 138, 41, 5, '#AA0000'); R(9, 139, 41, 1, '#FF0000'); R(9, 141, 41, 1, '#FF0000');
+  R(22, 150, 13, 10, '#000000'); for (let y = 151; y < 160; y += 2) R(23, y, 11, 1, '#555555');
+  for (const wx of [13, 38]){ R(wx - 1, 146, 8, 5, '#000000'); R(wx, 147, 6, 3, '#00AAFF'); R(wx, 147, 6, 1, '#AAFFFF'); }
+  R(25, 144, 7, 6, '#000000'); R(26, 144, 5, 5, '#FFFFFF'); R(28, 145, 1, 3, '#FF0000'); R(27, 146, 3, 1, '#FF0000');
+  R(52, 126, 1, 34, '#AAAAAA'); R(53, 126, 7, 2, '#FF0000'); R(53, 128, 7, 2, '#FFFFFF'); R(53, 130, 7, 1, '#FF0000');
+  R(BASE.x0, BASE.y, BASE.x1 - BASE.x0, 3, '#555555'); R(BASE.x0, BASE.y, BASE.x1 - BASE.x0, 1, '#AAAAAA');
+  for (let x = BASE.x0; x < BASE.x1; x += 4){ if (x < BASE.x0 + 6 || x > BASE.x1 - 8){ R(x, BASE.y + 1, 2, 2, '#FFFF00'); } }
+  const hx = Math.round((BASE.x0 + BASE.x1)/2) - 3; R(hx, BASE.y + 1, 1, 2, '#FFFF00'); R(hx + 5, BASE.y + 1, 1, 2, '#FFFF00'); R(hx, BASE.y + 1, 6, 1, '#FFFF00');
+
+  // Zones de sauvetage : plateforme rayée jaune et noire, poteaux, fanion
+  for (const p of o.pads){
+    for (let x = p.x; x < p.x + p.w; x++) R(x, p.y, 1, 2, ((x - p.x) >> 1) % 2 ? '#000000' : '#FFFF00');
+    R(p.x, p.y + 2, p.w, 1, '#555555');
+    for (const px of [p.x, p.x + p.w - 2]){ R(px, p.y - 7, 2, 7, '#000000'); R(px, p.y - 7, 1, 7, '#AAAAAA'); }
+    R(p.x + 2, p.y - 7, 5, 3, '#FF0000'); R(p.x + 2, p.y - 7, 5, 1, '#FF5555');
+  }
+
+  // Arbres ou stalagmites
+  for (const t of o.trees){
+    if (o.cave){
+      for (let i = 0; i < t.h; i++){
+        const w = Math.max(1, Math.floor(i*0.42)), y = t.y - t.h + i;
+        R(t.x - w - 1, y, 2*w + 3, 1, '#000000'); R(t.x - w, y, 2*w + 1, 1, '#555555'); R(t.x - w, y, 1, 1, '#AAAAAA');
+      }
+    } else {
+      const s = t.h >= 18 ? SPR.pine18 : SPR.pine15;
+      lx.drawImage(s.c, t.x - 5, t.y - s.h + 1);
+    }
+  }
+  return lc;
+}
+
+function txt(s, x, y, col, align = 'left', shadow = true){
+  ctx.font = FONT; ctx.textBaseline = 'top'; ctx.textAlign = align;
+  if (shadow){ ctx.fillStyle = '#000000'; ctx.fillText(s, x + 1, y + 1); }
+  ctx.fillStyle = col; ctx.fillText(s, x, y);
+}
+function rect(x, y, w, h, col){ ctx.fillStyle = col; ctx.fillRect(x, y, w, h); }
+function heart(x, y, col){ rect(x, y, 2, 1, col); rect(x + 3, y, 2, 1, col); rect(x, y + 1, 5, 1, col); rect(x + 1, y + 2, 3, 1, col); rect(x + 2, y + 3, 1, 1, col); }
+
+function drawHeli(sx, sy, dir, skid){
+  const flip = dir < 0;
+  blit(SPR.heli, sx, sy, 16, 7, flip);
+  const P = (dx, dy, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(flip ? sx - dx - w + 1 : sx + dx, sy + dy, w, h); };
+  // Sièges : jaune = occupé, gris = libre
+  const seats = cap();
+  for (let i = 0; i < seats; i++) P(-5 + i*2, 1, 1, 1, i < heli.pax ? '#FFFF00' : '#555555');
+  // Rotor principal (2 images) et rotor de queue
+  if (((T*24) | 0) % 2){ P(-12, -6, 24, 1, '#000000'); P(-10, -6, 4, 1, '#AAAAAA'); P(4, -6, 4, 1, '#AAAAAA'); }
+  else { P(-5, -6, 10, 1, '#555555'); P(-2, -6, 4, 1, '#000000'); }
+  if (((T*30) | 0) % 2){ P(-17, -5, 1, 5, '#AAAAAA'); } else { P(-18, -3, 3, 1, '#AAAAAA'); }
+  if (skid) P(-6, 4, 12, 1, skid);
+}
+
+function render(){
+  const cx = Math.floor(cam), cave = lvl.cave, LW = SPR.LW;
+  // Ciel en bandes
+  if (cave){ rect(0, 0, W, H, '#000000'); rect(0, 60, W, 70, '#000055'); }
+  else {
+    rect(0, 0, W, 40, '#0055FF'); rect(0, 40, W, 40, '#00AAFF'); rect(0, 80, W, 36, '#55AAFF'); rect(0, 116, W, H - 116, '#AAFFFF');
+  }
+  ctx.save();
+  if (shake > 0) ctx.translate(Math.round((Math.random()*2 - 1)*2), Math.round((Math.random()*2 - 1)*2));
+
+  const layerAt = (img, p) => { const off = Math.floor(((cam*p) % LW + LW) % LW); ctx.drawImage(img, -off, 0); ctx.drawImage(img, LW - off, 0); };
+  if (cave){ layerAt(SPR.caveTop, 0.3); layerAt(SPR.caveFar, 0.3); }
+  else {
+    for (const cl of SPR.cloudList){ const span = 900, xx = (((cl.x + T*3 - cam*0.12) % span) + span) % span - 70; ctx.drawImage(SPR.clouds[cl.k], Math.round(xx), cl.y); }
+    layerAt(SPR.mountains, 0.25);
+    layerAt(SPR.hills, 0.5);
+  }
+
+  // Terrain précalculé
+  ctx.drawImage(lvl.canvas, cx, 0, W, H, 0, 0, W, H);
+
+  const bx = Math.round(12 - cam);
+  if (bx > -80 && bx < W) txt('BASE', bx + 6, 126, '#FFFFFF');
+
+  // Survivants
+  for (const p of lvl.pads){
+    const sx = Math.round(p.x - cam); if (sx > W || sx + p.w < 0) continue;
+    const wave = ((T*4) | 0) % 2 === 0;
+    for (let i = 0; i < p.people; i++){ const v = SPR.people[i % 3], up = i % 2 ? !wave : wave; blit(up ? v[0] : v[1], sx + 7 + i*7, p.y - 1, 3, 8, i % 2 === 1); }
+  }
+  // Oiseaux
+  for (const b of lvl.birds){
+    if (!b.alive) continue;
+    const sx = Math.round(b.x - cam), sy = Math.round(b.y); if (sx < -10 || sx > W + 10) continue;
+    blit(SPR.bird[((T*8 + b.ph) | 0) % 2], sx, sy, 4, 2, b.spd < 0);
+  }
+  // Avions (hélice animée)
+  for (const p of planes){
+    const sx = Math.round(p.x - cam), sy = Math.round(p.y), right = p.vx > 0;
+    blit(SPR.plane, sx, sy, 13, 4, !right);
+    const px = right ? sx + 13 : sx - 13;
+    if (((T*30) | 0) % 2) rect(px, sy - 1, 1, 6, '#555555'); else rect(px, sy + 1, 1, 2, '#000000');
+  }
+  // Hélico
+  const h = heli;
+  if (!h.dead && !(h.inv > 0 && ((T*12) | 0) % 2 === 0)){
+    const st = stats(), gyH = lvl.gAt(h.x);
+    let skid = null;
+    if (!h.landed && gyH - (h.y + 4) < 28 && h.vy > 10) skid = h.vy <= st.safe ? '#55FF55' : '#FF0000';
+    drawHeli(Math.round(h.x - cam), Math.round(h.y), h.dir, skid);
+  }
+  for (const p of parts){ const big = p.t > 0.5; rect(Math.round(p.x - cam), Math.round(p.y), big ? 2 : 1, big ? 2 : 1, p.col); }
+  for (const f of floats) txt(f.s, Math.round(f.x - cam), Math.round(f.y), f.col, 'center');
+  for (const w of warns) if (((T*10) | 0) % 2 === 0) txt('!', w.side > 0 ? W - 11 : 3, w.y - 3, '#FF0000');
+  ctx.restore();
+
+  // HUD
+  rect(0, 0, W, 12, C.hud); rect(0, 12, W, 1, '#555555');
+  txt('NIV ' + lvl.n, 3, 2, C.text, 'left', false);
+  txt('$' + (save.money + levelCash), 50, 2, C.money, 'left', false);
+  const c = cap(), full = h.pax >= c;
+  txt('PAX ' + h.pax + '/' + c, 100, 2, full ? C.warn : C.person, 'left', false);
+  for (let i = 0; i < hpMax(); i++) heart(164 + i*7, 4, i < Math.max(0, h.hp) ? '#FF0000' : '#555555');
+  txt('RESTE ' + remaining(), W - 3, 2, C.text, 'right', false);
+
+  // Mini-carte
+  const mx = 40, mw = 240;
+  rect(mx - 1, 14, mw + 2, 4, '#000000'); rect(mx, 15, mw, 2, '#555555');
+  rect(mx, 15, 3, 2, '#55FF55');
+  for (const p of lvl.pads) rect(Math.round(mx + (p.x + p.w/2)/lvl.L*mw) - 1, 15, 2, 2, p.people > 0 ? '#FFFF00' : '#AAAAAA');
+  if (!h.dead) rect(Math.round(mx + h.x/lvl.L*mw) - 1, 14, 2, 4, '#FFFFFF');
+
+  if (state === 'play' && !h.dead && h.dir < 0 && h.pax > 0 && ((T*3) | 0) % 2 === 0) txt('<< BASE', 4, 23, '#55FF55');
+
+  if (state === 'play' && introT > 0){
+    rect(20, 63, W - 40, 32, '#000000'); rect(20, 63, W - 40, 1, '#FFFFFF'); rect(20, 94, W - 40, 1, '#FFFFFF');
+    txt('NIVEAU ' + lvl.n, W/2, 68, '#FFFF00', 'center', false);
+    txt(levelTag(lvl.n), W/2, 81, '#FFFFFF', 'center', false);
+  }
+}
+
+function levelTag(n){
+  if (n === 1) return 'POSEZ-VOUS EN DOUCEUR';
+  if (isCave(n)) return 'GROTTE : GARE AU PLAFOND';
+  if (n === 2) return 'OISEAUX EN VUE';
+  if (n === 3) return 'TRAFIC AERIEN';
+  return 'DIFFICULTE EN HAUSSE';
+}
+
+/* ---------- Écrans ---------- */
+function hideOv(){ ov.hidden = true; ov.innerHTML = ''; }
+function showOv(html){ ov.innerHTML = html; ov.hidden = false; const p = ov.querySelector('.prim'); if (p) p.focus({ preventScroll:true }); }
+function showTitle(){
+  const cont = save.lvl > 1;
+  showOv(`<h1>HÉLI<br>SECOURS</h1>
+    <p>Ramenez les survivants à la base.<br>Chaque sauvetage finance votre hélico.</p>
+    <div class="row">${cont
+      ? `<button class="btn prim" type="button" data-act="play">CONTINUER · NIV ${save.lvl}</button><button class="btn" type="button" data-act="reset">RECOMMENCER</button>`
+      : `<button class="btn prim" type="button" data-act="play">JOUER</button>`}</div>
+    <p class="note">MAINTENIR : MONTER ET AVANCER · RELÂCHER : DESCENDRE<br>ATTERRIR LENTEMENT SUR LES ZONES JAUNES${save.best > 1 ? `<br>RECORD : NIVEAU ${save.best}` : ''}</p>`);
+}
+function showShop(kind, info){
+  lastShop = { kind, info };
+  const head = kind === 'done'
+    ? `<h2>NIVEAU ${info.n} TERMINÉ</h2><ul class="sum"><li><span>SAUVETAGES</span><b>+$${info.cash}</b></li><li><span>BONUS NIVEAU</span><b>+$${info.bonus}</b></li>${info.perfect ? '<li><span>SANS DÉGÂT</span><b>+$50</b></li>' : ''}</ul>`
+    : `<h2 class="bad">CRASH !</h2><p>Les passagers et les gains de ce niveau sont perdus.</p>`;
+  const ups = Object.keys(UPG).map(k => {
+    const u = UPG[k], l = save.up[k], maxed = l >= u.max, c = u.cost(l);
+    return `<button class="btn up" type="button" data-act="buy" data-k="${k}" ${maxed || save.money < c ? 'disabled' : ''}><span>${u.name}</span><span class="v">${maxed ? 'MAX' : u.val(l) + ' > ' + u.val(l + 1)}</span><span class="c">${maxed ? '-' : '$' + c}</span></button>`;
+  }).join('');
+  const next = kind === 'done' ? `NIVEAU ${save.lvl}` : `RÉESSAYER NIV ${info.n}`;
+  showOv(`${head}<p class="cash">CAISSE : <b>$${save.money}</b></p><div class="shop">${ups}</div><button class="btn prim" type="button" data-act="${kind === 'done' ? 'next' : 'retry'}">${next}</button>`);
+}
+function showPause(){ showOv(`<h2>PAUSE</h2><button class="btn prim" type="button" data-act="resume">REPRENDRE</button><button class="btn" type="button" data-act="menu">MENU</button>`); }
+function pause(){ if (state !== 'play') return; state = 'pause'; input.hold = false; showPause(); }
+function resume(){ state = 'play'; hideOv(); input.hold = false; last = performance.now(); }
+
+ov.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  ensureAudio();
+  const a = b.dataset.act;
+  if (a === 'play') startLevel(save.lvl);
+  else if (a === 'reset'){ const best = save.best, sound = save.sound; save = fresh(); save.best = best; save.sound = sound; store(); startLevel(1); }
+  else if (a === 'next') startLevel(save.lvl);
+  else if (a === 'retry') startLevel(lastShop.info.n);
+  else if (a === 'resume') resume();
+  else if (a === 'menu'){ state = 'title'; lvl = buildLevel(save.lvl); heli = newHeli(); levelCash = 0; planes = []; warns = []; showTitle(); }
+  else if (a === 'buy'){
+    const k = b.dataset.k, u = UPG[k], l = save.up[k], c = u.cost(l);
+    if (l < u.max && save.money >= c){ save.money -= c; save.up[k]++; store(); sfx('buy'); showShop(lastShop.kind, lastShop.info); const again = ov.querySelector(`[data-k="${k}"]`); if (again && !again.disabled) again.focus({ preventScroll:true }); }
+  }
+});
+
+/* ---------- Commandes ---------- */
+const HOLD_KEYS = ['Space', 'ArrowUp', 'KeyW'];
+addEventListener('keydown', e => {
+  ensureAudio();
+  if (HOLD_KEYS.includes(e.code) && state === 'play'){ input.hold = true; e.preventDefault(); return; }
+  if ((e.code === 'KeyP' || e.code === 'Escape') && state === 'play'){ pause(); return; }
+  if (e.code === 'KeyP' && state === 'pause'){ resume(); return; }
+  if (e.code === 'KeyM') toggleSound();
+});
+addEventListener('keyup', e => { if (HOLD_KEYS.includes(e.code)) input.hold = false; });
+cv.addEventListener('pointerdown', e => { ensureAudio(); if (state === 'play'){ input.hold = true; try { cv.setPointerCapture(e.pointerId); } catch(err){} e.preventDefault(); } });
+const release = () => { input.hold = false; };
+cv.addEventListener('pointerup', release); cv.addEventListener('pointercancel', release); cv.addEventListener('lostpointercapture', release);
+cv.addEventListener('contextmenu', e => e.preventDefault());
+addEventListener('blur', release);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+function toggleSound(){ save.sound = !save.sound; store(); sndBtn.textContent = 'SON : ' + (save.sound ? 'OUI' : 'NON'); }
+sndBtn.addEventListener('click', () => { ensureAudio(); toggleSound(); sndBtn.blur(); });
+
+/* ---------- Boucle ---------- */
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.033, (now - last)/1000); last = now;
+  if (state === 'play') update(dt);
+  stepFx(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+
+function boot(data){
+  if (data && data.save) save = Object.assign(fresh(), data.save); else load();
+  sndBtn.textContent = 'SON : ' + (save.sound ? 'OUI' : 'NON');
+  buildSprites();
+  lvl = buildLevel(save.lvl); heli = newHeli();
+  showTitle();
+  if (document.fonts && document.fonts.load) document.fonts.load(FONT).catch(() => {});
+  requestAnimationFrame(frame);
+}
+try { if (window.claude && window.claude.hot && window.claude.hot.snapshot) window.claude.hot.snapshot(() => ({ save })); } catch(e){}
+if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(boot);
+else boot((window.claude && window.claude.hot && window.claude.hot.data) || {});
+})();
+</script>
+
+<a href="index.html" id="arcadeBack" aria-label="Retour à SOArcade" style="position:fixed;left:calc(env(safe-area-inset-left,0px) + 8px);bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:9999;font:600 12px/1 system-ui,sans-serif;color:#fff;background:rgba(10,10,20,.78);border:1px solid rgba(255,255,255,.35);padding:8px 10px;text-decoration:none;border-radius:4px">◀ Menu</a>
+
+</body></html>

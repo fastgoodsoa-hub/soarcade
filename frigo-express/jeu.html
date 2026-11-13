@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="fr">
+<head><meta name="robots" content="noindex">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Frigo Express</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@600;700;800&display=swap">
+<style>
+/* Layout : en-tête (niveau, chrono, score), le frigo ouvert au centre (compartiments en grille, trois places par étagère,
+   produits du fond visibles en transparence), barre d'aides en bas. Un seul thème : frigo blanc et bleu glacier. */
+:root{
+  --bg:#bfe3f2; --bg2:#e9f7fc; --frame:#f7fbfd; --frame-dk:#c9dbe4; --glass:#d8eef7; --shelf:#9fc6d8; --ink:#14394a; --dim:#4f7383;
+  --green:#3fbf6a; --green-dk:#23894a; --tomato:#ff5a3c; --gold:#ffc23a;
+  --f-title:'Bungee', Impact, sans-serif; --f-ui:'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:linear-gradient(var(--bg2),var(--bg));color:var(--ink);font-family:var(--f-ui);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.app{height:100%;max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px calc(env(safe-area-inset-bottom,0px) + 50px);display:flex;flex-direction:column;gap:10px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pill{background:#fff;border-radius:99px;padding:4px 14px;font-weight:800;font-size:17px;box-shadow:0 3px 0 var(--frame-dk);display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pill small{font-size:12px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.timer.low{color:var(--tomato)}
+.bar{height:8px;border-radius:9px;background:#fff;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.1)}
+.bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--green),#9be36a);transition:width .25s linear}
+.fridge{flex:1;min-height:0;background:var(--frame);border-radius:26px;padding:12px;box-shadow:0 8px 0 var(--frame-dk),0 14px 30px rgba(20,57,74,.22);display:flex;flex-direction:column;position:relative}
+.fridge::before{content:"";position:absolute;right:-6px;top:22%;width:8px;height:22%;border-radius:8px;background:#dfeaf0;box-shadow:inset -2px 0 0 #b9cfda}
+.board{flex:1;min-height:0;display:grid;gap:8px;align-content:center;background:linear-gradient(#eaf7fc,#cfe9f4);border-radius:16px;padding:8px;box-shadow:inset 0 0 0 3px #e3f1f7,inset 0 6px 18px rgba(100,160,190,.25)}
+.cell{position:relative;border-radius:12px;background:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,.15));box-shadow:inset 0 -6px 0 var(--shelf),inset 0 0 0 2px rgba(159,198,216,.5);display:flex;align-items:flex-end;justify-content:center;padding:4px 4px 8px;min-height:0;overflow:hidden}
+.cell.target{box-shadow:inset 0 -6px 0 var(--green),inset 0 0 0 3px var(--green)}
+.cell.full.target{box-shadow:inset 0 -6px 0 var(--tomato),inset 0 0 0 3px var(--tomato)}
+.cell .back{position:absolute;left:0;right:0;top:4px;display:flex;justify-content:space-around;padding:0 8px;opacity:.38;filter:saturate(.3) brightness(.9);transform:scale(.78);pointer-events:none}
+.cell .slots{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%;align-items:end;gap:0;justify-items:center}
+.cell .layers{position:absolute;top:3px;right:6px;font-size:11px;font-weight:800;color:var(--dim)}
+.it{font-size:var(--isz,34px);line-height:1.1;text-align:center;filter:drop-shadow(0 3px 0 rgba(20,57,74,.18));cursor:grab;transition:transform .12s}
+.it.sel{transform:translateY(-8px) scale(1.12)}
+.it.hint{animation:hint .6s ease-in-out infinite alternate}
+@keyframes hint{to{transform:translateY(-6px) scale(1.15)}}
+.it.pop{animation:pop .35s ease-in forwards}
+@keyframes pop{40%{transform:scale(1.35)}100%{transform:scale(0);opacity:0}}
+.drag{position:fixed;z-index:50;pointer-events:none;font-size:calc(var(--isz,34px) * 1.25);transform:translate(-50%,-70%);filter:drop-shadow(0 8px 6px rgba(20,57,74,.3))}
+.tools{display:flex;gap:8px;justify-content:center}
+.tool{flex:1;max-width:160px;border:0;border-radius:16px;background:#fff;box-shadow:0 4px 0 var(--frame-dk);padding:6px 4px;font:800 14px var(--f-ui);color:var(--ink);cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.1;position:relative}
+.tool span{font-size:22px}
+.tool b{position:absolute;top:-6px;right:-4px;background:var(--tomato);color:#fff;border-radius:99px;min-width:22px;height:22px;font-size:13px;line-height:22px}
+.tool[disabled]{opacity:.45}
+.tool:active{transform:translateY(3px);box-shadow:0 1px 0 var(--frame-dk)}
+.float{position:fixed;z-index:40;pointer-events:none;font:800 20px var(--f-ui);color:var(--green-dk);text-shadow:0 2px 0 #fff;animation:up .9s ease-out forwards}
+@keyframes up{to{transform:translateY(-50px);opacity:0}}
+.ov{position:fixed;inset:0;z-index:60;background:rgba(20,57,74,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.card{background:#fff;border-radius:24px;padding:22px 20px;max-width:400px;width:100%;text-align:center;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 0 var(--frame-dk)}
+.card h1,.card h2{font-family:var(--f-title);font-weight:400;margin:0;line-height:1;color:var(--ink);text-wrap:balance}
+.card h1{font-size:clamp(36px,10vw,50px)} .card h1 b{font-weight:400;color:var(--green)}
+.card h2{font-size:30px}
+.card p{margin:0;color:var(--dim);font-size:16px;line-height:1.4}
+.stars{font-size:38px;letter-spacing:4px;color:var(--gold)} .stars .off{color:#dbe6eb}
+.btn{font:800 19px var(--f-ui);border:0;border-radius:16px;padding:12px;background:var(--green);color:#fff;box-shadow:0 5px 0 var(--green-dk);cursor:pointer}
+.btn.alt{background:#eef5f8;color:var(--ink);box-shadow:0 4px 0 var(--frame-dk)}
+.btn:active{transform:translateY(3px)}
+.demo{font-size:30px;letter-spacing:6px}
+@media (prefers-reduced-motion:reduce){.it,.it.pop,.it.hint,.float{animation:none;transition:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <span class="pill"><small>Niveau</small><span id="lvl">1</span></span>
+    <span class="pill timer" id="timer">1:30</span>
+    <span class="pill"><small>Score</small><span id="score">0</span></span>
+  </div>
+  <div class="bar"><i id="tbar"></i></div>
+  <div class="fridge"><div class="board" id="board"></div></div>
+  <div class="tools">
+    <button class="tool" id="tHint" type="button"><span>💡</span>Indice<b id="nHint">3</b></button>
+    <button class="tool" id="tShuf" type="button"><span>🔀</span>Mélanger<b id="nShuf">2</b></button>
+    <button class="tool" id="tTime" type="button"><span>⏱️</span>+20 s<b id="nTime">1</b></button>
+  </div>
+</div>
+<div class="ov" id="ov"></div>
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const FOODS = ['🥑','🥕','🍅','🥬','🍋','🍄','🫑','🥦','🍓','🫐','🧄','🍆','🌽','🥒','🍇','🍊','🍎','🥥','🧃','🍐','🍌','🥝','🍑','🍒','🌶️','🧅','🥔','🍠','🍉','🫘'];
+const KEY = 'frigo-express-v1';
+let save = { level: 1, best: 0 }; try { Object.assign(save, JSON.parse(localStorage.getItem(KEY)) || {}); } catch (e) {}
+const store = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} };
+
+/* ---------- son ---------- */
+let AC = null;
+function audio() { try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) {} }
+function tone(f, d, type = 'sine', v = .06, delay = 0) { if (!AC) return; const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g).connect(AC.destination); o.start(t); o.stop(t + d + .02); }
+const sfx = { pick: () => tone(520, .06, 'triangle'), drop: () => tone(380, .07, 'triangle'), no: () => tone(160, .12, 'square', .03), pop: n => { tone(660 + n * 80, .1, 'triangle', .08); tone(990 + n * 80, .14, 'sine', .06, .06); }, win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, .2, 'triangle', .08, i * .12)), lose: () => [392, 330, 262].forEach((f, i) => tone(f, .25, 'triangle', .07, i * .18)) };
+
+/* ---------- niveau ---------- */
+// Chaque compartiment : une pile de rangées de 3 places ; seule la rangée de devant se joue.
+let G = null;
+function config(n) {
+  const cells = Math.min(6 + Math.floor((n - 1) / 2) * 3, 12);
+  const cols = 3, rows = cells / 3;
+  const depth = Math.min(2 + Math.floor((n - 1) / 3), 5);
+  const kinds = Math.min(4 + n, FOODS.length);
+  const time = 75 + cells * 6 + depth * 10;
+  return { cells, cols, rows, depth, kinds, time };
+}
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function newLevel(n) {
+  const c = config(n);
+  const capacity = c.cells * c.depth * 3;
+  // nombre de produits : capacité moins quelques places vides pour pouvoir bouger
+  let triples = Math.floor((capacity - 4) / 3);
+  const kinds = shuffle(FOODS.slice()).slice(0, c.kinds);
+  let items = []; for (let i = 0; i < triples; i++) items.push(kinds[i % kinds.length], kinds[i % kinds.length], kinds[i % kinds.length]);
+  for (let tries = 0; tries < 50; tries++) {
+    shuffle(items);
+    const cells = Array.from({ length: c.cells }, () => []);
+    let k = 0;
+    // rangée de devant d'abord (avec les trous), puis les rangées du fond pleines
+    const holes = capacity - items.length; const holeCells = shuffle([...Array(c.cells).keys()]).slice(0, holes);
+    for (let ci = 0; ci < c.cells; ci++) { const row = [null, null, null]; const free = holeCells.filter(h => h === ci).length; for (let s = 0; s < 3 - free; s++) row[s] = items[k++]; cells[ci].push(row); }
+    for (let d = 1; d < c.depth; d++) for (let ci = 0; ci < c.cells; ci++) { const row = []; for (let s = 0; s < 3; s++) row.push(k < items.length ? items[k++] : null); cells[ci].push(row); }
+    // pas de triplé tout fait au départ
+    if (!cells.some(st => st[0][0] && st[0][0] === st[0][1] && st[0][1] === st[0][2])) { G = { n, c, cells, left: items.length, time: c.time, max: c.time, score: 0, combo: 0, comboT: 0, sel: null, over: false, tools: { hint: 3, shuf: 2, time: 1 } }; break; }
+  }
+  $('#lvl').textContent = n; render(); updateHud();
+}
+
+/* ---------- affichage ---------- */
+const board = $('#board');
+function render() {
+  const c = G.c; board.style.gridTemplateColumns = `repeat(${c.cols},minmax(0,1fr))`;
+  const w = (board.clientWidth - 16 - (c.cols - 1) * 8) / c.cols, hAvail = (board.clientHeight - 16 - (c.rows - 1) * 8) / c.rows;
+  const rowh = Math.min(hAvail, w * .95);
+  board.style.gridTemplateRows = `repeat(${c.rows},${rowh}px)`;
+  document.documentElement.style.setProperty('--isz', Math.max(18, Math.min(w / 4.1, rowh / 2.3, 44)) + 'px');
+  board.innerHTML = '';
+  G.cells.forEach((st, ci) => {
+    const el = document.createElement('div'); el.className = 'cell'; el.dataset.ci = ci;
+    if (st[1]) { const b = document.createElement('div'); b.className = 'back'; b.innerHTML = st[1].map(x => `<span class="it" style="cursor:default">${x || ''}</span>`).join(''); el.appendChild(b); }
+    if (st.length > 1) { const l = document.createElement('div'); l.className = 'layers'; l.textContent = '+' + (st.length - 1); el.appendChild(l); }
+    const s = document.createElement('div'); s.className = 'slots';
+    (st[0] || [null, null, null]).forEach((x, si) => { const it = document.createElement('div'); it.className = 'it'; it.dataset.ci = ci; it.dataset.si = si; it.textContent = x || ''; if (!x) it.style.visibility = 'hidden'; if (G.sel && G.sel.ci === ci && G.sel.si === si) it.classList.add('sel'); s.appendChild(it); });
+    el.appendChild(s); board.appendChild(el);
+  });
+}
+function updateHud() {
+  const t = Math.max(0, Math.ceil(G.time)); $('#timer').textContent = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+  $('#timer').classList.toggle('low', G.time < 15); $('#tbar').style.width = (G.time / G.max * 100) + '%';
+  $('#score').textContent = G.score;
+  for (const [k, id] of [['hint', 'Hint'], ['shuf', 'Shuf'], ['time', 'Time']]) { $('#n' + id).textContent = G.tools[k]; $('#t' + id).disabled = !G.tools[k] || G.over; }
+}
+function floatText(txt, x, y) { const f = document.createElement('div'); f.className = 'float'; f.textContent = txt; f.style.left = x + 'px'; f.style.top = y + 'px'; document.body.appendChild(f); setTimeout(() => f.remove(), 900); }
+
+/* ---------- règles ---------- */
+const front = ci => G.cells[ci][0] || [null, null, null];
+function moveItem(from, to, toSlot) {
+  if (from.ci === to) return false;
+  const row = front(to); let slot = toSlot !== undefined && !row[toSlot] ? toSlot : row.indexOf(null);
+  if (slot < 0) return false;
+  row[slot] = front(from.ci)[from.si]; front(from.ci)[from.si] = null;
+  settle(from.ci); return { ci: to, slot };
+}
+function settle(ci) { const st = G.cells[ci]; while (st.length > 1 && st[0].every(x => !x)) st.shift(); }
+function checkTriple(ci) {
+  const row = front(ci);
+  if (row[0] && row[0] === row[1] && row[1] === row[2]) {
+    const cellEl = board.children[ci]; const r = cellEl.getBoundingClientRect();
+    cellEl.querySelectorAll('.slots .it').forEach(e => e.classList.add('pop'));
+    G.combo = G.comboT > 0 ? G.combo + 1 : 1; G.comboT = 4;
+    const pts = 30 * G.combo; G.score += pts; G.left -= 3; sfx.pop(Math.min(G.combo, 6));
+    floatText(G.combo > 1 ? `Combo x${G.combo} ! +${pts}` : `+${pts}`, r.left + r.width / 2 - 40, r.top + 10);
+    if (navigator.vibrate) try { navigator.vibrate(20); } catch (e) {}
+    setTimeout(() => { G.cells[ci][0] = [null, null, null]; settle(ci); render(); updateHud(); if (G.left <= 0) win(); }, 330);
+    return true;
+  }
+  return false;
+}
+function findMove() {
+  // un produit qui complète une paire déjà posée, avec une place libre
+  for (let a = 0; a < G.cells.length; a++) { const ra = front(a); const counts = {}; ra.forEach(x => { if (x) counts[x] = (counts[x] || 0) + 1; });
+    for (const f in counts) if (counts[f] === 2 && ra.includes(null)) for (let b = 0; b < G.cells.length; b++) if (b !== a) { const si = front(b).indexOf(f); if (si >= 0) return { ci: b, si, to: a }; } }
+  for (let a = 0; a < G.cells.length; a++) { const ra = front(a); const nn = ra.filter(Boolean); if (nn.length === 1 && ra.filter(x => !x).length === 2) for (let b = 0; b < G.cells.length; b++) if (b !== a) { const si = front(b).indexOf(nn[0]); if (si >= 0) return { ci: b, si, to: a }; } }
+  return null;
+}
+function win() {
+  if (G.over) return; G.over = true; sfx.win();
+  const ratio = G.time / G.max, stars = ratio > .5 ? 3 : ratio > .25 ? 2 : 1, bonus = Math.round(G.time) * 5;
+  G.score += bonus; save.level = Math.max(save.level, G.n + 1); save.best = Math.max(save.best, G.score); store(); updateHud();
+  show(`<h2>Frigo rangé !</h2><div class="stars">${[0, 1, 2].map(i => `<span class="${i < stars ? '' : 'off'}">★</span>`).join('')}</div><p>Bonus temps +${bonus} · score ${G.score}</p><button class="btn" data-next>Niveau ${G.n + 1}</button><button class="btn alt" data-again>Rejouer ce niveau</button>`);
+}
+function lose() { if (G.over) return; G.over = true; sfx.lose(); show(`<h2>Temps écoulé</h2><p>Il restait ${G.left} produits à ranger. Les aides se rechargent à chaque partie.</p><button class="btn" data-again>Réessayer</button><button class="btn alt" data-home>Accueil</button>`); }
+
+/* ---------- glisser-déposer et toucher ---------- */
+let drag = null;
+board.addEventListener('pointerdown', e => {
+  audio(); if (!G || G.over) return; const it = e.target.closest('.slots .it'); if (!it || !it.textContent) { tapCell(e); return; }
+  const ci = +it.dataset.ci, si = +it.dataset.si;
+  drag = { ci, si, el: null, x0: e.clientX, y0: e.clientY, moved: false, src: it };
+  board.setPointerCapture && board.setPointerCapture(e.pointerId);
+});
+board.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 8) { drag.moved = true; drag.el = document.createElement('div'); drag.el.className = 'drag'; drag.el.textContent = drag.src.textContent; document.body.appendChild(drag.el); drag.src.style.visibility = 'hidden'; sfx.pick(); }
+  if (drag.moved) { drag.el.style.left = e.clientX + 'px'; drag.el.style.top = e.clientY + 'px'; const t = cellAt(e.clientX, e.clientY); board.querySelectorAll('.cell').forEach(c => c.classList.remove('target', 'full')); if (t >= 0 && t !== drag.ci) { const c = board.children[t]; c.classList.add('target'); if (!front(t).includes(null)) c.classList.add('full'); } }
+});
+function endDrag(e) {
+  if (!drag) return; const d = drag; drag = null;
+  board.querySelectorAll('.cell').forEach(c => c.classList.remove('target', 'full'));
+  if (!d.moved) { // simple toucher : sélectionner, ou déplacer la sélection ici
+    if (G.sel && G.sel.ci !== d.ci) { tryMove(G.sel, d.ci, d.si); } else { G.sel = G.sel && G.sel.ci === d.ci && G.sel.si === d.si ? null : { ci: d.ci, si: d.si }; sfx.pick(); render(); }
+    return;
+  }
+  d.el.remove(); d.src.style.visibility = '';
+  const t = cellAt(e.clientX, e.clientY);
+  if (t >= 0) tryMove({ ci: d.ci, si: d.si }, t, slotAt(t, e.clientX)); else render();
+}
+board.addEventListener('pointerup', endDrag); board.addEventListener('pointercancel', endDrag);
+function tapCell(e) { if (!G.sel) return; const c = e.target.closest('.cell'); if (c) tryMove(G.sel, +c.dataset.ci); }
+function tryMove(from, to, slot) {
+  const res = moveItem(from, to, slot); G.sel = null;
+  if (!res) { sfx.no(); render(); return; }
+  sfx.drop(); render(); checkTriple(res.ci);
+  clearHints();
+}
+function cellAt(x, y) { const els = board.children; for (let i = 0; i < els.length; i++) { const r = els[i].getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return i; } return -1; }
+function slotAt(ci, x) { const r = board.children[ci].getBoundingClientRect(); return Math.min(2, Math.max(0, Math.floor((x - r.left) / r.width * 3))); }
+function clearHints() { board.querySelectorAll('.hint').forEach(e => e.classList.remove('hint')); }
+
+/* ---------- aides ---------- */
+$('#tHint').addEventListener('click', () => { audio(); if (!G.tools.hint || G.over) return; const m = findMove(); if (!m) { floatText('Mélange !', innerWidth / 2 - 40, innerHeight / 2); return; } G.tools.hint--; render(); const it = board.querySelector(`.slots .it[data-ci="${m.ci}"][data-si="${m.si}"]`); if (it) it.classList.add('hint'); board.children[m.to].classList.add('target'); setTimeout(() => board.children[m.to] && board.children[m.to].classList.remove('target'), 1500); updateHud(); });
+$('#tShuf').addEventListener('click', () => { audio(); if (!G.tools.shuf || G.over) return; G.tools.shuf--; const all = []; G.cells.forEach(st => st[0].forEach(x => all.push(x))); shuffle(all); G.cells.forEach((st, i) => { st[0] = all.slice(i * 3, i * 3 + 3); }); render(); G.cells.forEach((_, i) => checkTriple(i)); updateHud(); });
+$('#tTime').addEventListener('click', () => { audio(); if (!G.tools.time || G.over) return; G.tools.time--; G.time = Math.min(G.max, G.time + 20); updateHud(); });
+
+/* ---------- écrans ---------- */
+function show(h) { const o = $('#ov'); o.innerHTML = `<div class="card">${h}</div>`; o.hidden = false; }
+$('#ov').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; audio(); const d = b.dataset;
+  if (d.play !== undefined) { $('#ov').hidden = true; newLevel(save.level); }
+  if (d.next !== undefined) { $('#ov').hidden = true; newLevel(G.n + 1); }
+  if (d.again !== undefined) { $('#ov').hidden = true; newLevel(G.n); }
+  if (d.restart !== undefined) { save.level = 1; store(); $('#ov').hidden = true; newLevel(1); }
+  if (d.home !== undefined) home();
+});
+function home() { show(`<h1>Frigo <b>Express</b></h1><div class="demo">🥑🥑🥑</div><p>Range le frigo avant la fin du chrono : glisse les produits d'une étagère à l'autre. Trois produits identiques sur la même étagère disparaissent, et ceux du fond avancent.</p><button class="btn" data-play>${save.level > 1 ? 'Continuer · niveau ' + save.level : 'Jouer'}</button>${save.level > 1 ? '<button class="btn alt" data-restart>Recommencer au niveau 1</button>' : ''}${save.best ? `<p>Meilleur score : ${save.best}</p>` : ''}`); }
+
+let last = performance.now();
+function loop(t) { const dt = Math.min((t - last) / 1000, .1); last = t; if (G && !G.over && $('#ov').hidden) { G.time -= dt; if (G.comboT > 0) G.comboT -= dt; if (G.time <= 0) { G.time = 0; lose(); } updateHud(); } requestAnimationFrame(loop); }
+addEventListener('resize', () => { if (G) render(); });
+newLevel(save.level); home(); requestAnimationFrame(loop);
+})();
+</script>
+<a href="index.html" id="arcadeBack" aria-label="Retour à SOArcade" style="position:fixed;left:calc(env(safe-area-inset-left,0px) + 8px);bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:9999;font:600 12px/1 system-ui,sans-serif;color:#fff;background:rgba(10,10,20,.78);border:1px solid rgba(255,255,255,.35);padding:8px 10px;text-decoration:none;border-radius:4px">◀ Menu</a>
+</body>
+</html>

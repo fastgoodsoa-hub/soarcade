@@ -1,0 +1,1392 @@
+<!doctype html><html><head><meta name="robots" content="noindex"><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Ligne de Front</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+/* Layout : plein écran paysage, carte en pixel art au centre, minicarte en haut à gauche,
+   ressources en haut à droite, panneau de commandement en bas à droite.
+   Un seul thème : écran de console 8 bits, fond noir, cadres bleus, palette Master System. */
+:root{
+  --black:#000000;
+  --frame:#5555FF;
+  --frame-dark:#0000AA;
+  --ink:#FFFFFF;
+  --muted:#AAAAAA;
+  --gold:#FFFF55;
+  --wood:#FFAA55;
+  --ok:#55FF55;
+  --bad:#FF5555;
+  --f-pix:'Press Start 2P', 'Courier New', monospace;
+  --f-ui:'Pixelify Sans', 'Trebuchet MS', system-ui, sans-serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--black);color:var(--ink);font-family:var(--f-ui);
+  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+:root{padding:0!important}
+#view{position:fixed;left:0;top:0;image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+button{font-family:var(--f-ui);color:var(--ink);cursor:pointer}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.box{background:var(--black);border:2px solid var(--frame);box-shadow:inset 0 0 0 2px var(--frame-dark)}
+
+#top{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);right:calc(env(safe-area-inset-right,0px) + 6px);
+  display:flex;gap:5px;align-items:stretch;z-index:5}
+.chip{display:flex;align-items:center;gap:6px;padding:5px 8px;font-family:var(--f-pix);font-size:10px;white-space:nowrap}
+.chip small{font-family:var(--f-ui);font-size:12px;color:var(--muted)}
+.ico{width:10px;height:10px;flex:none;image-rendering:pixelated}
+#menuBtn{font-family:var(--f-pix);font-size:9px;padding:0 9px}
+#holdBar{position:fixed;top:calc(env(safe-area-inset-top,0px) + 38px);right:calc(env(safe-area-inset-right,0px) + 6px);
+  padding:4px 8px;font-size:13px;z-index:5}
+
+#miniWrap{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:calc(env(safe-area-inset-left,0px) + 6px);padding:3px;z-index:5;line-height:0}
+#mini{width:128px;touch-action:none;image-rendering:pixelated}
+
+#panel{position:fixed;right:calc(env(safe-area-inset-right,0px) + 6px);bottom:calc(env(safe-area-inset-bottom,0px) + 6px);
+  width:min(340px,48vw);z-index:5;display:flex;flex-direction:column}
+#pHead{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:2px solid var(--frame-dark);min-height:20px}
+#pSw{width:10px;height:10px;flex:none}
+#pName{font-family:var(--f-pix);font-size:10px;line-height:1.3;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pClose{background:var(--black);border:2px solid var(--frame);width:26px;height:24px;font-family:var(--f-pix);font-size:9px;padding:0}
+#pBody{padding:6px 8px 8px;display:flex;flex-direction:column;gap:6px}
+#pInfo{font-size:13px;color:var(--muted);min-height:16px;line-height:1.25}
+.hp{height:4px;background:#550000;margin-top:3px}.hp>i{display:block;height:100%;background:var(--ok)}
+#pBtns{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.cmd{background:var(--black);border:2px solid var(--frame-dark);padding:4px 2px 3px;min-height:44px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;font-size:12.5px;font-weight:600;line-height:1.05;text-align:center}
+.cmd:active,.cmd.on{border-color:var(--gold);background:#000055}
+.cmd[disabled]{opacity:.35;cursor:default}
+.cost{display:flex;gap:5px;font-family:var(--f-pix);font-size:7px;font-weight:400}
+.cost .a{color:var(--gold)}.cost .m{color:var(--wood)}
+#pQueue{display:flex;gap:4px;align-items:center;font-size:12px;color:var(--muted)}
+#pQueue .q{border:1px solid var(--frame-dark);padding:0 4px}
+#pQueue .bar{flex:1;height:4px;background:#000055}#pQueue .bar i{display:block;height:100%;background:var(--gold)}
+
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 44px);transform:translateX(-50%);padding:6px 12px;
+  font-size:14px;z-index:6;pointer-events:none;opacity:0;white-space:nowrap}
+#box{position:fixed;border:2px dashed var(--ok);pointer-events:none;z-index:4}
+
+.screen{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.82);
+  padding:12px 16px;box-sizing:border-box;overflow:auto}
+.card{max-width:700px;width:100%;padding:16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:12px 22px;align-items:start;box-sizing:border-box;margin:auto}
+.card .full{grid-column:1/-1}
+.eyebrow{font-family:var(--f-pix);font-size:8px;color:var(--gold);line-height:1.6}
+h1{font-family:var(--f-pix);font-weight:400;font-size:clamp(18px,4.4vw,30px);line-height:1.15;margin:6px 0 0;text-wrap:balance;
+  color:var(--ink);text-shadow:3px 3px 0 var(--frame-dark)}
+h2{font-family:var(--f-pix);font-weight:400;font-size:9px;margin:0 0 7px;color:var(--frame);line-height:1.4}
+.card p,.card li{font-size:14px;line-height:1.3;color:#FFFFFF;margin:0}
+.card ul{margin:0;padding-left:14px;display:flex;flex-direction:column;gap:3px}
+.acts{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.big{background:var(--gold);color:var(--black);border:0;box-shadow:inset -3px -3px 0 #AAAA00;padding:11px 16px;font-family:var(--f-pix);font-size:11px}
+.ghost{background:var(--black);border:2px solid var(--frame);padding:9px 12px;font-size:14px;font-weight:600}
+.camps{display:flex;gap:10px;flex-wrap:wrap}
+.camp{flex:1;min-width:150px;background:var(--black);border:2px solid var(--frame-dark);padding:8px 10px;text-align:left;display:flex;flex-direction:column;gap:6px}
+.camp[aria-pressed="true"]{border-color:var(--gold);background:#000055}
+.camp b{font-family:var(--f-pix);font-size:9px;font-weight:400}
+.camp span{font-size:13px;color:var(--muted);line-height:1.2}
+.camp canvas{image-rendering:pixelated;width:128px;height:32px}
+@media (max-height:430px){.camp span{font-size:12px}.card{gap:8px 18px;padding:12px 14px}.card p,.card li{font-size:12.5px}h1{font-size:18px}.camp canvas{width:96px;height:24px}}
+@media (max-width:560px){.card{grid-template-columns:1fr}}
+#rotate{position:fixed;inset:0;z-index:20;background:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px}
+#rotate .phone{width:40px;height:68px;border:4px solid var(--ink);animation:rot 2.2s steps(4) infinite}
+@keyframes rot{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media (prefers-reduced-motion:reduce){#rotate .phone{animation:none;transform:rotate(-90deg)}}
+</style>
+
+<canvas id="view"></canvas>
+<div id="miniWrap" class="box"><canvas id="mini"></canvas></div>
+<div id="top">
+  <div class="chip box"><canvas class="ico" id="icoA" width="5" height="5"></canvas><span id="rA">0</span><small>minerai</small></div>
+  <div class="chip box"><canvas class="ico" id="icoM" width="5" height="5"></canvas><span id="rM">0</span><small>bois</small></div>
+  <div class="chip box"><span style="color:var(--muted)">POP</span><span id="rP">0/0</span></div>
+  <div class="chip box"><span style="color:var(--ok)">ZONES</span><span id="rZ">0/0</span></div>
+  <button id="menuBtn" class="box" type="button">MENU</button>
+</div>
+<div id="holdBar" class="box" hidden></div>
+<div id="panel" class="box">
+  <div id="pHead"><span id="pSw"></span><span id="pName">Carte 1</span><button id="pClose" type="button" aria-label="Désélectionner">X</button></div>
+  <div id="pBody"><div id="pInfo"></div><div id="pQueue" hidden></div><div id="pBtns"></div></div>
+</div>
+<div id="toast" class="box"></div>
+<div id="box" hidden></div>
+
+<div id="scrStart" class="screen">
+  <div class="card box">
+    <div class="full">
+      <div class="eyebrow" id="sEyebrow">CARTE 1</div>
+      <h1>Ligne de Front</h1>
+    </div>
+    <div class="full">
+      <h2>CHOISISSEZ VOTRE CAMP</h2>
+      <div class="camps">
+        <button class="camp" type="button" data-camp="nature" aria-pressed="true"><b>LA NATURE</b><canvas width="64" height="16" id="prevN"></canvas><span>Bûcherons, mineurs, archers, sangliers et catapultes.</span></button>
+        <button class="camp" type="button" data-camp="pollution" aria-pressed="false"><b>LA POLLUTION</b><canvas width="64" height="16" id="prevP"></canvas><span>Usines, abatteuses, foreuses, tireurs, bulldozers et mortiers.</span></button>
+      </div>
+    </div>
+    <div>
+      <h2>OBJECTIF</h2>
+      <ul>
+        <li>Détruire tous les bâtiments adverses,</li>
+        <li>ou tenir toutes les zones pendant 60 secondes.</li>
+        <li>Chaque zone tenue rapporte du minerai.</li>
+      </ul>
+    </div>
+    <div>
+      <h2>COMMANDES</h2>
+      <ul>
+        <li>Toucher une unité : la sélectionner. Deux touchers : toutes celles du même type.</li>
+        <li>Toucher le terrain : y aller. Un ennemi : attaquer.</li>
+        <li>Un doigt glissé : déplacer la vue. Deux doigts écartés : sélection en cadre.</li>
+        <li>Vos unités traversent vos murs, les ennemis doivent les détruire.</li>
+      </ul>
+    </div>
+    <div class="full acts">
+      <button class="big" id="btnStart" type="button">JOUER</button>
+      <button class="ghost" id="btnReset" type="button" hidden>Reprendre à la carte 1</button>
+    </div>
+  </div>
+</div>
+<div id="scrPause" class="screen" hidden>
+  <div class="card box">
+    <div class="full"><div class="eyebrow">PAUSE</div><h1>Menu</h1></div>
+    <div class="full acts">
+      <button class="big" id="btnResume" type="button">REPRENDRE</button>
+      <button class="ghost" id="btnRestart" type="button">Recommencer la carte</button>
+      <button class="ghost" id="btnHelp" type="button">Changer de camp</button>
+    </div>
+  </div>
+</div>
+<div id="scrEnd" class="screen" hidden>
+  <div class="card box">
+    <div class="full"><div class="eyebrow" id="eEyebrow"></div><h1 id="eTitle"></h1></div>
+    <div class="full"><p id="eText"></p></div>
+    <div class="full acts">
+      <button class="big" id="btnNext" type="button"></button>
+      <button class="ghost" id="btnAgain" type="button">Rejouer cette carte</button>
+      <button class="ghost" id="btnHome" type="button">Accueil</button>
+    </div>
+  </div>
+</div>
+<div id="rotate" hidden><div class="phone"></div><div style="font-family:var(--f-pix);font-size:12px">TOURNEZ LE TÉLÉPHONE</div><div style="color:var(--muted);font-size:14px">Le jeu se joue à l'horizontale.</div></div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+
+/* ================= Palette Master System (canaux 0, 85, 170, 255) ================= */
+const PAL = {k:'#000000', w:'#FFFFFF', g:'#AAAAAA', G:'#555555', s:'#FFAA55', S:'#AA5500', b:'#AA5500', B:'#550000',
+  y:'#FFFF55', o:'#FFAA00', r:'#FF0000', n:'#00AA00', N:'#005500', l:'#55FF55', c:'#55AAFF', x:'#555500', f:'#FF5500', a:'#AAAA55', p:'#FFFFAA'};
+const TEAM_COL = [['#5555FF','#0000AA'],['#FF5555','#AA0000'],['#FFFF55','#AAAA00'],['#FF55FF','#AA00AA']];
+const TEAM_CSS = TEAM_COL.map(c => c[0]);
+const TEAM_NAME = ['Bleus', 'Rouges', 'Jaunes', 'Violets'];
+
+function mk(w, h){ const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+function R(x, col, a, b, w, h){ x.fillStyle = col; x.fillRect(a|0, b|0, w|0, h|0); }
+function ORect(x, a, b, w, h, fill, line){ R(x, line || '#000000', a, b, w, h); if (w > 2 && h > 2) R(x, fill, a+1, b+1, w-2, h-2); }
+function disc(x, cx, cy, r, col){ for (let dy = -r; dy <= r; dy++){ const w = Math.floor(Math.sqrt(r*r - dy*dy + r*0.6)); R(x, col, cx-w, cy+dy, 2*w+1, 1); } }
+function pline(x, x0, y0, x1, y1, col){ x0|=0; y0|=0; x1|=0; y1|=0; const dx = Math.abs(x1-x0), dy = -Math.abs(y1-y0), sx = x0<x1?1:-1, sy = y0<y1?1:-1; let e = dx+dy; x.fillStyle = col;
+  for (let i = 0; i < 400; i++){ x.fillRect(x0, y0, 1, 1); if (x0 === x1 && y0 === y1) break; const e2 = 2*e; if (e2 >= dy){ e += dy; x0 += sx; } if (e2 <= dx){ e += dx; y0 += sy; } } }
+
+/* ================= Sprites d'unités (16 x 16, tournés vers la droite) ================= */
+const LA = ['.....kPPPPk.....', '.....kPkkPk.....', '....kkk..kkk....'];
+const LB = ['.....kPPPPk.....', '......kPPk......', '......kkkk......'];
+const SPR = {
+ nature: {
+  wood: {P:'B', top:[
+   '................','......kkkk......','.....kTTTTk.....','.....kTTTTTk....','.....kssssk.....','.....kskskk..kk.',
+   '......kssk..kggk','.....kttttk.kbk.','....ksttTttkbk..','....kstTttTkb...','.....kttTttk....']},
+  ore: {P:'G', top:[
+   '................','......kkkk......','.....kyyyyk.....','....kyyywyyk....','.....kssssk.....','.....kskskk.....',
+   '......kssk.kkkk.','.....kttttkkgggk','....ksttttkbkkk.','....ksTttTkb....','.....kttttk.....']},
+  ranged: {P:'N', top:[
+   '............k...','......kkk...kb..','.....kTTTk..k.b.','....kTTTTTk.k..b','....kTsssk..k..b','.....kskskk.k..b',
+   '......kssk..k..b','.....kttttkkkkkb','....kNttttk.k..b','....kNtTttk.k.b.','.....kttttk.kb..']},
+  fast: {rows:[
+   '................','................','................','................','...kkkkkkkk.....','..kBBBBBBBBkk...',
+   '.kbbbttttbbbBk..','.kbbTttttTbbbbk.','kbbbbbbbbbbbkwbk','kbbbbbbbbbbbbbbk','kbbbbbbbbbbbkwkk','.kbbbbbbbbbbbkk.',
+   '..kBk..kBk.kBk..','..kBk..kBk.kBk..','..kk...kk..kk...','................'],
+   alt:{12:'...kBk..kBk.kBk.',13:'...kBk..kBk.kBk.',14:'...kk...kk...kk.'}},
+  siege: {rows:[
+   '................','................','..........kkk...','.........kgggk..','........kbkgk...','.......kbk.k....',
+   '......kbk.......','.....kbk....k...','...kkbkkkkkktk..','..kbbbbbbbbbbbk.','..kbttttttttbbk.','..kbbbbbbbbbbbk.',
+   '...kGgk...kGgk..','...kgGk...kgGk..','....kk.....kk...','................'], treads:[12,13]},
+ },
+ pollution: {
+  wood: {rows:[
+   '................','................','................','................','....kkkkk.......','...kcccck.......',
+   '...kcccckkkkk...','..kttttttttttk.k','..kTttttttttTkgk','..kttttttttttgwg','..kTTTTTTTTTTkgk','.kGGGGGGGGGGGGk.',
+   'kGgGgGgGgGgGgGgk','kgGgGgGgGgGgGgGk','.kkkkkkkkkkkkkk.','................'], treads:[12,13]},
+  ore: {rows:[
+   '................','................','................','................','...kkkk.........','..kcccck........',
+   '..kcccckkkkk....','.kttttttttttk...','.kTtttttttttkgk.','.kttttttttttgggk','.kTTTTTTTTTTkgk.','..kGGGGGGGGGk...',
+   '.kGgGgGgGgGgGk..','.kgGgGgGgGgGgk..','..kkkkkkkkkkk...','................'], treads:[12,13]},
+  ranged: {P:'G', top:[
+   '................','......kkkk......','.....kGGGGk.....','....kGGGGGGk....','.....kggggk.....','.....kckckk.....',
+   '......kgGk......','.....kttttkkkkkk','....kgttttkGGGGk','....kgtTTtkkkk..','.....kttttk.....']},
+  fast: {rows:[
+   '................','................','................','................','......kkkk......','.....kcccck.....',
+   '.....kcccckkk...','..kkkttttttttkkk','.kgktTttttttTkgk','.kgktttttttttkgk','.kgkTTTTTTTTTkgk','..kGGGGGGGGGGkgk',
+   '.kGgGgGgGgGgGgk.','.kgGgGgGgGgGgGk.','..kkkkkkkkkkkk..','................'], treads:[12,13]},
+  siege: {rows:[
+   '................','................','................','.........kk.....','........kGGk....','.......kGGk.....',
+   '......kGGk......','....kkGGkkkk....','...kttttttttk...','..kTttttttttTk..','..kTTTTTTTTTTk..','..kGGGGGGGGGGk..',
+   '.kGgGgGgGgGgGgk.','.kgGgGgGgGgGgGk.','..kkkkkkkkkkkk..','................'], treads:[12,13]},
+ }
+};
+const TREES = [[
+ '................','.....kkkkkk.....','...kknnnnnnkk...','..knnlnnnnnnNk..','.knnlllnnnnnnNk.','.knnllnnnnnnnNk.',
+ 'knnnnnnnnnnnnNNk','knnnnnnnnnnNnNNk','kNnnnnnnnnnnNNNk','.kNnnnnnnnNNNNk.','.kNNNnnnNNNNNNk.','..kkNNNNNNNNkk..',
+ '....kkkBBkkk....','......kbBk......','......kbBk......','.....kkkkkk.....'],[
+ '.......kk.......','......knNk......','.....knnnNk.....','....knlnnNNk....','.....knnnNk.....','....knnnnNNk....',
+ '...knlnnnnNNk...','....knnnnNNk....','...knnnnnnNNk...','..knlnnnnnnNNk..','.knnnnnnnnnNNNk.','..kkkkkkkkkkkk..',
+ '......kbBk......','......kbBk......','.....kkkkkk.....','................']];
+
+function spriteFromRows(rows, team, extra){
+  const c = mk(16, rows.length), x = c.getContext('2d');
+  rows.forEach((row, y) => { row = (row + '................').slice(0, 16);
+    for (let i = 0; i < 16; i++){ const ch = row[i]; if (ch === '.') continue;
+      const col = ch === 't' ? TEAM_COL[team][0] : ch === 'T' ? TEAM_COL[team][1] : (extra && extra[ch]) || PAL[ch];
+      if (col) R(x, col, i, y, 1, 1); } });
+  return c;
+}
+function flipC(c){ const f = mk(c.width, c.height), x = f.getContext('2d'); x.translate(c.width, 0); x.scale(-1, 1); x.drawImage(c, 0, 0); return f; }
+function unitRows(fac, role, frame){
+  const d = SPR[fac][role];
+  if (d.top) return [...d.top, ...(frame ? LB : LA).map(r => r.replace(/P/g, d.P)), '................', '................'];
+  const rows = d.rows.slice();
+  if (frame && d.alt) for (const k in d.alt) rows[k] = d.alt[k];
+  if (frame && d.treads) for (const i of d.treads) rows[i] = rows[i].replace(/[gG]/g, ch => ch === 'g' ? 'G' : 'g');
+  return rows;
+}
+const sprCache = new Map();
+function unitSprite(fac, role, team, frame, left){
+  const key = `u|${fac}|${role}|${team}|${frame}|${left?1:0}`; let c = sprCache.get(key);
+  if (!c){ c = spriteFromRows(unitRows(fac, role, frame), team); if (left) c = flipC(c); sprCache.set(key, c); }
+  return c;
+}
+
+/* ================= Bâtiments dessinés au pixel ================= */
+function thatch(x, a, b, w, h){
+  for (let i = 0; i < h; i++){
+    const inset = Math.floor((h-1-i)/h*w*0.3);
+    R(x, '#000000', a+inset, b+i, w-2*inset, 1);
+    R(x, (i % 3 === 0) ? '#AA5500' : '#FFAA55', a+inset+1, b+i, w-2*inset-2, 1);
+  }
+  const t = Math.floor(w*0.3); R(x, '#000000', a+t, b, w-2*t, 1); R(x, '#000000', a, b+h-1, w, 1);
+  for (let i = a+1; i < a+w-1; i += 3) R(x, '#AA5500', i, b+h-2, 1, 1);
+}
+function planks(x, a, b, w, h){ ORect(x, a, b, w, h, '#AA5500'); for (let i = a+3; i < a+w-1; i += 4) R(x, '#550000', i, b+1, 1, h-2); }
+function concrete(x, a, b, w, h){ ORect(x, a, b, w, h, '#AAAAAA');
+  for (let j = b+4, k = 0; j < b+h-1; j += 4, k++){ R(x, '#555555', a+1, j, w-2, 1); for (let i = a+(k%2?2:5); i < a+w-1; i += 6) R(x, '#555555', i, j-3, 1, 3); } }
+function flatRoof(x, a, b, w, h, tc){ ORect(x, a, b, w, h, '#555555'); R(x, '#000000', a+2, b+2, w-4, 1); R(x, tc, a+1, b+h-3, w-2, 2); for (let i = a+5; i < a+w-6; i += 9) ORect(x, i, b+4, 4, 3, '#AAAAAA'); }
+function win(x, a, b, col){ ORect(x, a, b, 5, 4, col || '#55AAFF'); R(x, '#FFFFFF', a+1, b+1, 1, 1); }
+function door(x, a, b, w, h){ ORect(x, a, b, w, h, '#550000'); }
+function flagAt(x, a, b, h, tc, td){ R(x, '#000000', a, b, 2, h); R(x, '#FFFFFF', a, b, 1, h); ORect(x, a+2, b, 8, 6, tc); R(x, td, a+3, b+4, 6, 1); }
+function crystal(x, cx, cy){ ORect(x, cx-2, cy-3, 4, 6, '#FFAA00'); R(x, '#FFFF55', cx-1, cy-2, 1, 3); }
+
+const BPAINT = {
+ nature: {
+  hq(x, tc, td, ET){ planks(x, 4, ET+20, 40, 28); thatch(x, 0, 4, 48, ET+20); R(x, tc, 16, 4, 16, 2); door(x, 20, ET+34, 8, 14);
+    win(x, 8, ET+27, '#FFFF55'); win(x, 33, ET+27, '#FFFF55');
+    ORect(x, 42, ET+14, 6, 34, '#AA5500'); R(x, tc, 43, ET+16, 4, 6); R(x, '#FFAA00', 43, ET+25, 4, 6); R(x, '#00AA00', 43, ET+34, 4, 6);
+    for (const yy of [ET+18, ET+27, ET+36]){ R(x, '#000000', 43, yy, 1, 1); R(x, '#000000', 45, yy, 1, 1); }
+    flagAt(x, 2, 0, 20, tc, td); },
+  house(x, tc, td, ET){ planks(x, 3, ET+12, 26, 20); thatch(x, 0, 0, 32, ET+15); R(x, tc, 10, 1, 12, 2); door(x, 13, ET+21, 6, 11); win(x, 5, ET+17, '#FFFF55'); win(x, 22, ET+17, '#FFFF55'); },
+  barracks(x, tc, td, ET){ planks(x, 2, ET+18, 26, 22); thatch(x, 0, 0, 30, ET+20); R(x, tc, 9, 1, 12, 2); door(x, 11, ET+28, 7, 12);
+    R(x, '#550000', 38, ET+18, 2, 18); disc(x, 39, ET+14, 7, '#000000'); disc(x, 39, ET+14, 6, '#FFFFFF'); disc(x, 39, ET+14, 4, '#FF0000'); disc(x, 39, ET+14, 2, '#FFFFFF'); R(x, '#FFFF55', 38, ET+13, 2, 2);
+    R(x, '#550000', 0, ET+43, 48, 1); for (let i = 0; i < 48; i += 5) ORect(x, i, ET+39, 3, 9, '#AA5500');
+    flagAt(x, 30, ET+2, 18, tc, td); },
+  workshop(x, tc, td, ET){ ORect(x, 3, ET+12, 4, 36, '#AA5500'); ORect(x, 41, ET+12, 4, 36, '#AA5500'); R(x, '#AA5500', 7, ET+46, 34, 2);
+    thatch(x, 0, 0, 48, ET+16); R(x, tc, 16, 1, 16, 2);
+    for (let i = 0; i < 3; i++){ disc(x, 13+i*7, ET+42, 3, '#550000'); disc(x, 13+i*7, ET+42, 2, '#FFAA55'); R(x, '#AA5500', 13+i*7, ET+42, 1, 1); }
+    disc(x, 16, ET+36, 3, '#550000'); disc(x, 16, ET+36, 2, '#FFAA55'); disc(x, 23, ET+36, 3, '#550000'); disc(x, 23, ET+36, 2, '#FFAA55');
+    disc(x, 34, ET+34, 6, '#000000'); disc(x, 34, ET+34, 5, '#AA5500'); R(x, '#550000', 29, ET+34, 11, 1); R(x, '#550000', 34, ET+29, 1, 11); disc(x, 34, ET+34, 1, '#000000'); },
+  depot(x, tc, td, ET){ for (const sx of [4, 14, 25]) ORect(x, sx, ET+18, 3, 14, '#AA5500'); ORect(x, 1, ET+16, 30, 4, '#AA5500');
+    planks(x, 4, ET+4, 24, 13); thatch(x, 0, 0, 32, ET+7); R(x, tc, 10, 1, 12, 2);
+    ORect(x, 8, ET+9, 5, 7, '#FFFFAA'); ORect(x, 18, ET+9, 5, 7, '#FFFFAA'); R(x, '#AA5500', 10, ET+9, 1, 1); R(x, '#AA5500', 20, ET+9, 1, 1); },
+  tower(x, tc, td, ET){ ORect(x, 4, 22, 4, ET+10, '#AA5500'); ORect(x, 24, 22, 4, ET+10, '#AA5500');
+    pline(x, 8, 24, 23, ET+28, '#550000'); pline(x, 23, 24, 8, ET+28, '#550000'); pline(x, 8, 25, 23, ET+29, '#550000'); pline(x, 23, 25, 8, ET+29, '#550000');
+    planks(x, 3, 9, 26, 13); R(x, '#000000', 9, 13, 2, 5); R(x, '#000000', 21, 13, 2, 5); thatch(x, 0, 0, 32, 11); R(x, tc, 10, 1, 12, 2);
+    ORect(x, 0, 20, 32, 4, '#AA5500'); R(x, tc, 1, 21, 30, 1); },
+  wall(x, tc, td, ET, m){ const st = (a, t, bt) => { ORect(x, a, t, 4, bt-t, '#AA5500'); R(x, '#550000', a+2, t+1, 1, bt-t-2); R(x, '#FFAA55', a+1, t+1, 1, 2); };
+    const top = ET-5, bot = ET+12;
+    if (m & 8){ st(-1, top, bot); st(2, top+1, bot); }
+    if (m & 2){ st(10, top+1, bot); st(13, top, bot); }
+    if (m & 1) st(6, 0, bot - 6);
+    if (m & 4) st(6, top + 6, ET+16);
+    st(6, top, bot); R(x, tc, 7, top+4, 2, 2); },
+ },
+ pollution: {
+  hq(x, tc, td, ET){ for (const [cx, cy] of [[5, 0], [14, 4]]){ ORect(x, cx, cy, 7, ET+16-cy, '#AA0000'); for (let j = cy+3; j < ET+14; j += 3) R(x, '#550000', cx+1, j, 5, 1); R(x, '#FFFFFF', cx+1, cy+3, 5, 2); }
+    concrete(x, 0, ET+16, 48, 32);
+    for (let k = 0; k < 3; k++){ const x0 = 1 + k*16; for (let r = 0; r < 12; r++){ const w = Math.floor(r*15/11)+1; R(x, '#000000', x0, ET+5+r, w+1, 1); R(x, r < 2 ? '#000000' : '#555555', x0+1, ET+5+r, w-1, 1); R(x, '#55AAFF', x0+1, ET+5+r, 2, 1); } }
+    R(x, tc, 1, ET+16, 46, 2); for (const wx of [4, 12, 20]) win(x, wx, ET+24);
+    ORect(x, 29, ET+30, 16, 18, tc); for (let j = ET+32; j < ET+47; j += 3) R(x, td, 30, j, 14, 1); },
+  house(x, tc, td, ET){ concrete(x, 1, ET+4, 30, 28); flatRoof(x, 0, 0, 32, ET+6, tc); for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) win(x, 4+c*9, ET+10+r*8); ORect(x, 13, ET+25, 6, 7, '#555555'); },
+  barracks(x, tc, td, ET){ concrete(x, 0, ET+8, 34, 32); flatRoof(x, 0, 0, 34, ET+10, tc); ORect(x, 14, ET+28, 7, 12, '#555555'); win(x, 4, ET+16); win(x, 25, ET+16);
+    flagAt(x, 38, ET+2, 22, tc, td);
+    for (const [sx, sy] of [[35, ET+42], [41, ET+42], [38, ET+38]]) ORect(x, sx, sy, 7, 5, '#AAAA55', '#555500'); },
+  workshop(x, tc, td, ET){ ORect(x, 36, 0, 8, ET+12, '#555555'); R(x, '#AA0000', 37, 3, 6, 2); R(x, '#AA0000', 37, 8, 6, 2);
+    ORect(x, 0, ET+8, 46, 40, '#555555'); for (let j = ET+13; j < ET+47; j += 5) R(x, '#000000', 1, j, 44, 1);
+    ORect(x, 0, ET+4, 38, 8, '#000000'); R(x, tc, 1, ET+9, 36, 2);
+    for (const wx of [5, 17]){ ORect(x, wx, ET+20, 8, 8, '#FF5500'); R(x, '#FFFF55', wx+2, ET+22, 4, 4); }
+    ORect(x, 29, ET+30, 13, 18, '#FF5500'); R(x, '#FFAA00', 31, ET+33, 9, 15); R(x, '#FFFF55', 33, ET+38, 5, 10); },
+  depot(x, tc, td, ET){ ORect(x, 1, ET+6, 30, 26, '#AAAAAA'); for (let i = 3; i < 30; i += 3) R(x, '#555555', i, ET+7, 1, 24);
+    for (let r = 0; r < ET+8; r++){ const inset = Math.max(0, Math.floor(6 - r*1.2)); R(x, '#000000', inset, r, 32-2*inset, 1); R(x, r % 2 ? '#555555' : '#AAAAAA', inset+1, r, 30-2*inset, 1); }
+    R(x, '#000000', 0, ET+7, 32, 1); R(x, tc, 1, ET+6, 30, 2); ORect(x, 10, ET+16, 12, 16, '#555555'); for (let j = ET+18; j < ET+31; j += 3) R(x, '#000000', 11, j, 10, 1);
+    ORect(x, 24, ET+25, 6, 7, '#AA5500'); R(x, '#550000', 24, ET+28, 6, 1); },
+  tower(x, tc, td, ET){ concrete(x, 2, ET+6, 28, 26); disc(x, 16, ET+4, 10, '#000000'); disc(x, 16, ET+4, 9, '#555555'); disc(x, 15, ET+2, 6, '#AAAAAA'); R(x, '#FFFFFF', 12, ET-1, 2, 2);
+    R(x, tc, 7, ET+9, 18, 2); ORect(x, 23, ET+1, 9, 4, '#555555'); R(x, '#000000', 31, ET+2, 1, 2); },
+  wall(x, tc, td, ET, m){ const bl = (a, t, w, bt) => { ORect(x, a, t, w, bt-t, '#AAAAAA'); for (let j = t+3; j < bt-1; j += 3) R(x, '#555555', a+1, j, w-2, 1); };
+    const top = ET-3, bot = ET+12;
+    if (m & 8) bl(0, top, 6, bot); if (m & 2) bl(10, top, 6, bot);
+    if (m & 1) bl(4, 0, 8, bot - 6); if (m & 4) bl(4, top + 6, 8, ET+16);
+    bl(4, top, 8, bot); R(x, tc, 5, top+2, 6, 1);
+    for (let i = 0; i < 16; i += 2){ if ((i < 4 && !(m & 8)) || (i > 11 && !(m & 2))) continue; R(x, '#000000', i, top-2, 1, 1); R(x, '#AAAAAA', i+1, top-1, 1, 1); } },
+ }
+};
+const BSIZE = {hq:[3,3], house:[2,2], barracks:[3,3], workshop:[3,3], depot:[2,2], tower:[2,2], wall:[1,1]};
+const BET = {nature:{hq:16, house:8, barracks:8, workshop:8, depot:12, tower:28, wall:6}, pollution:{hq:20, house:12, barracks:10, workshop:22, depot:8, tower:14, wall:6}};
+const SMOKE = {pollution:{hq:[[8,0],[17,4]], workshop:[[40,0]]}};
+function bldSprite(fac, role, team, mask){
+  const key = `b|${fac}|${role}|${team}|${mask||0}`; let c = sprCache.get(key);
+  if (!c){ const [w, h] = BSIZE[role], ET = BET[fac][role]; c = mk(w*16, h*16 + ET); const x = c.getContext('2d');
+    BPAINT[fac][role](x, TEAM_COL[team][0], TEAM_COL[team][1], ET, mask || 0); c.et = ET; sprCache.set(key, c); }
+  return c;
+}
+function depositSprite(){
+  let c = sprCache.get('dep'); if (c) return c; c = mk(32, 36); const x = c.getContext('2d'), E = 4;
+  disc(x, 22, E+16, 9, '#000000'); disc(x, 22, E+16, 8, '#555555'); disc(x, 20, E+13, 5, '#AAAAAA');
+  disc(x, 10, E+19, 8, '#000000'); disc(x, 10, E+19, 7, '#555555'); disc(x, 8, E+17, 4, '#AAAAAA');
+  disc(x, 18, E+25, 6, '#000000'); disc(x, 18, E+25, 5, '#555555'); disc(x, 17, E+23, 2, '#AAAAAA');
+  for (const [cx, cy] of [[8, E+17], [23, E+12], [17, E+24], [27, E+20], [12, E+24]]) crystal(x, cx, cy);
+  c.et = E; sprCache.set('dep', c); return c;
+}
+
+/* ================= Données de jeu ================= */
+const NAMES = {
+  nature: {wood:'Bûcheron', ore:'Mineur', ranged:'Archer', fast:'Sanglier', siege:'Catapulte',
+           hq:'Hutte du chef', house:'Cabane', barracks:"Camp d'archers", workshop:'Atelier', depot:'Grenier', tower:'Tour de guet', wall:'Palissade'},
+  pollution: {wood:'Abatteuse', ore:'Foreuse', ranged:'Tireur', fast:'Bulldozer', siege:'Mortier',
+           hq:'Usine', house:'Dortoir', barracks:'Caserne', workshop:'Fonderie', depot:'Entrepôt', tower:'Tourelle', wall:'Mur'}
+};
+const UT = {
+  wood:   {hp:40,  speed:2.2, dmg:3,  range:0.95, cd:1.2, sight:5, cost:{a:50,m:0},    time:8,  pop:1, r:0.3, gather:'m'},
+  ore:    {hp:40,  speed:2.2, dmg:3,  range:0.95, cd:1.2, sight:5, cost:{a:50,m:0},    time:8,  pop:1, r:0.3, gather:'a'},
+  ranged: {hp:55,  speed:2.0, dmg:7,  range:5,    cd:1.1, sight:7, cost:{a:55,m:20},   time:10, pop:1, r:0.3, proj:true, vsB:0.5},
+  fast:   {hp:120, speed:3.6, dmg:10, range:0.95, cd:1.0, sight:6, cost:{a:80,m:30},   time:12, pop:1, r:0.4},
+  siege:  {hp:90,  speed:1.3, dmg:26, range:8.5,  cd:4,   sight:9, cost:{a:120,m:120}, time:18, pop:2, r:0.45, proj:true, splash:1.3, vsB:2.5},
+};
+const BT = {
+  hq:       {w:3, h:3, hp:1600, cost:{a:400,m:300}, time:60, pop:5, train:['wood','ore'], drop:true},
+  house:    {w:2, h:2, hp:450,  cost:{a:100,m:60},  time:15, pop:5},
+  barracks: {w:3, h:3, hp:850,  cost:{a:160,m:120}, time:25, train:['ranged','fast']},
+  workshop: {w:3, h:3, hp:950,  cost:{a:200,m:160}, time:30, train:['siege'], req:'barracks'},
+  depot:    {w:2, h:2, hp:550,  cost:{a:100,m:100}, time:18, drop:true},
+  tower:    {w:2, h:2, hp:600,  cost:{a:120,m:140}, time:25, atk:{dmg:9, range:6.5, cd:1.3}},
+  wall:     {w:1, h:1, hp:320,  cost:{a:0,m:12},    time:4},
+};
+const BUILD_LIST = ['house','barracks','workshop','depot','tower','wall'];
+const POP_MAX = 60, ZONE_INCOME = 1.5, HOLD_TIME = 60, CARRY = 10;
+const isMil = u => u.role !== 'wood' && u.role !== 'ore';
+const other = f => f === 'nature' ? 'pollution' : 'nature';
+
+function levelCfg(n){
+  const enemies = Math.min(n, 3);
+  const dims = [[48,36],[58,44],[64,54]][enemies-1];
+  const cfg = {n, enemies, W:dims[0], H:dims[1], zones:enemies+2,
+    waveFirst: Math.max(140, 300 - (n-1)*40), waveEvery: Math.max(75, 150 - (n-1)*12),
+    aiBonus: 1 + Math.min(n-1, 6)*0.08, waveMin: Math.min(4 + n, 12), capFirst: Math.max(70, 240 - (n-1)*55),
+    milQueue: n === 1 ? 1 : 2, milCap: n === 1 ? 9 : Math.min(40, 8 + n*5), towers: Math.min(2, n-1)};
+  cfg.waveMin = Math.min(cfg.waveMin, cfg.milCap - 2);
+  return cfg;
+}
+const store = {
+  level(){ try { return Math.max(1, parseInt(localStorage.getItem('ldf_level') || '1', 10) || 1); } catch(e){ return 1; } },
+  camp(){ try { return localStorage.getItem('ldf_camp') === 'pollution' ? 'pollution' : 'nature'; } catch(e){ return 'nature'; } },
+  set(k, v){ try { localStorage.setItem(k, String(v)); } catch(e){} }
+};
+
+/* ================= Rendu ================= */
+const view = $('#view'), vctx = view.getContext('2d');
+const isTouch = matchMedia('(pointer:coarse)').matches;
+let VW = 1, VH = 1, S = 2, BW = 1, BH = 1;
+function resize(){
+  VW = window.innerWidth; VH = window.innerHeight;
+  S = Math.max(2, Math.floor(VH / (isTouch ? 180 : 230)));
+  BW = Math.ceil(VW / S); BH = Math.ceil(VH / S);
+  view.width = BW; view.height = BH; view.style.width = BW*S + 'px'; view.style.height = BH*S + 'px';
+  vctx.imageSmoothingEnabled = false;
+  if (G) clampCam();
+  checkOrientation();
+}
+
+/* ================= État et carte ================= */
+let G = null, nextId = 1, camp = store.camp();
+function mulberry(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function hh(a, b){ let h = Math.imul(a, 374761393) + Math.imul(b, 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return (h ^ (h >>> 16)) >>> 0; }
+
+function newGame(level){
+  const cfg = levelCfg(level), W = cfg.W, H = cfg.H, rnd = mulberry(level * 7919 + 13);
+  G = {cfg, W, H, rnd, time:0, over:false, ents:new Map(), units:[], buildings:[], deposits:[], zones:[], teams:[], proj:[], fx:[], parts:[], dying:[],
+       occ:new Uint8Array(W*H), entAt:new Int32Array(W*H), wallTeam:new Int8Array(W*H).fill(-1), treeAmt:new Float32Array(W*H), treeVar:new Uint8Array(W*H), dirt:[]};
+  initPathfinder(W, H);
+  const nTeams = 1 + cfg.enemies;
+  const corners = [[6, H-7], [W-7, 6], [6, 6], [W-7, H-7]];
+  for (let t = 0; t < nTeams; t++){
+    G.teams.push({id:t, fac: t === 0 ? camp : other(camp), a:400, m:300, pop:0, popCap:0, alive:true, ai: t > 0, base:corners[t],
+      nextWave: cfg.waveFirst + t*12, nextCap: cfg.capFirst + t*7, think: t*0.25, alert:null, hold:0});
+  }
+  const bases = G.teams.map(t => t.base);
+  const zonePts = [[W/2, H/2]];
+  for (let k = 0; zonePts.length < cfg.zones && k < 3000; k++){
+    const x = 5 + rnd()*(W-10), y = 5 + rnd()*(H-10);
+    if (bases.some(b => Math.hypot(b[0]-x, b[1]-y) < 12)) continue;
+    if (zonePts.some(z => Math.hypot(z[0]-x, z[1]-y) < 11)) continue;
+    zonePts.push([x, y]);
+  }
+  const near = (x, y) => bases.some(b => Math.hypot(b[0]-x, b[1]-y) < 6.5) || zonePts.some(z => Math.hypot(z[0]-x, z[1]-y) < 3.6);
+  const plant = (x, y) => { if (x<0||y<0||x>=W||y>=H) return; const i = y*W+x; if (G.occ[i]) return; G.occ[i] = 1; G.treeAmt[i] = 60; G.treeVar[i] = rnd() < 0.55 ? 0 : 1; };
+  for (let x = 0; x < W; x++){ plant(x,0); plant(x,H-1); if (rnd()<0.6) plant(x,1); if (rnd()<0.6) plant(x,H-2); }
+  for (let y = 0; y < H; y++){ plant(0,y); plant(W-1,y); if (rnd()<0.6) plant(1,y); if (rnd()<0.6) plant(W-2,y); }
+  const blob = (cx, cy, r, dens) => { for (let y = Math.floor(cy-r); y <= cy+r; y++) for (let x = Math.floor(cx-r); x <= cx+r; x++){ const d = Math.hypot(x-cx, y-cy); if (d > r) continue; if (rnd() < dens*(1 - d/(r+0.8)) + 0.15 && !near(x, y)) plant(x, y); } };
+  for (let k = 0; k < Math.round(W*H/150); k++) blob(3 + rnd()*(W-6), 3 + rnd()*(H-6), 1.5 + rnd()*2.8, 0.95);
+  for (const b of bases){ const sx = b[0] < W/2 ? 1 : -1, sy = b[1] < H/2 ? 1 : -1; blob(b[0] + sx*8.5, b[1] - sy, 2.6, 1.1); blob(b[0] - sx, b[1] + sy*8.5, 2.2, 1.1); }
+  const clearRect = (x0, y0, w, h) => { for (let y = y0; y < y0+h; y++) for (let x = x0; x < x0+w; x++){ if (x<0||y<0||x>=W||y>=H) continue; const i = y*W+x; if (G.occ[i] === 1){ G.occ[i] = 0; G.treeAmt[i] = 0; } } };
+  for (const b of bases){ const sx = b[0] < W/2 ? 1 : -1, sy = b[1] < H/2 ? 1 : -1; const dx = Math.round(b[0] + sx*5) - 1, dy = Math.round(b[1] + sy*4) - 1; clearRect(dx, dy, 2, 2); addDeposit(dx, dy, 6000); }
+  for (let k = 0; k < Math.min(zonePts.length, 1 + cfg.enemies); k++){
+    const z = zonePts[k]; const dx = Math.round(z[0] + (rnd()<0.5?-4:3)), dy = Math.round(z[1] - 1);
+    if (dx>2 && dy>2 && dx<W-4 && dy<H-4){ clearRect(dx, dy, 2, 2); if (!G.occ[dy*W+dx] && !G.occ[dy*W+dx+1] && !G.occ[(dy+1)*W+dx] && !G.occ[(dy+1)*W+dx+1]) addDeposit(dx, dy, 4000); }
+  }
+  for (const z of zonePts) G.zones.push({x:z[0], z:z[1], r:2.6, owner:-1, cteam:-1, cval:0});
+  for (const t of G.teams){
+    const [bx, by] = t.base; clearRect(bx-4, by-4, 9, 9);
+    addBuilding('hq', t.id, bx-1, by-1, true);
+    const roles = ['wood','wood','ore','ore']; [[-2,-2],[2,-2],[-2,2],[2,2]].forEach(([ox, oy], i) => spawnUnit(roles[i], t.id, bx + ox*0.8 + 0.5, by + oy*0.8 + 0.5));
+  }
+  G.dirt = [...bases.map(b => [b[0]+0.5, b[1]+0.5, 5.2]), ...G.zones.map(z => [z.x, z.z, 3.2]), ...G.deposits.map(d => [d.x, d.z, 2.2])];
+  buildStatic();
+  const pb = G.teams[0].base; camX = (pb[0] + 3)*16 - BW/2; camY = (pb[1] - 1)*16 - BH/2; clampCam();
+  selection = []; buildMode = null; wallStart = null; rallyMode = false; lastTapId = 0;
+  initMini(); updatePop(); refreshPanel(true);
+}
+
+/* -------- Couche statique : sol et arbres -------- */
+const rgb = h => { const v = parseInt(h.slice(1), 16); return ((255 << 24) | ((v & 255) << 16) | (((v >> 8) & 255) << 8) | (v >> 16)) >>> 0; };
+const GC = {grass:rgb('#55AA00'), grass2:rgb('#00AA00'), light:rgb('#AAFF55'), flowerW:rgb('#FFFFFF'), flowerY:rgb('#FFFF55'), dirt:rgb('#AA5500'), dirtL:rgb('#FFAA55'), dirtD:rgb('#550000')};
+const BAYER = [0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5];
+function groundPix(wx, wy){
+  let d = 0; const fx = wx/16, fy = wy/16;
+  for (const [cx, cy, r] of G.dirt){ const dd = r - Math.hypot(fx-cx, fy-cy); if (dd > 0) d = Math.max(d, Math.min(1, dd/1.6)); }
+  const h = hh(wx, wy);
+  if (d*16 > BAYER[(wy & 3)*4 + (wx & 3)]) return h % 19 === 0 ? GC.dirtL : h % 41 === 0 ? GC.dirtD : GC.dirt;
+  if (h % 1301 === 0) return GC.flowerW; if (h % 1303 === 7) return GC.flowerY;
+  return h % 17 === 0 ? GC.grass2 : h % 53 === 3 ? GC.light : GC.grass;
+}
+function buildStatic(){
+  const W = G.W, H = G.H, c = mk(W*16, H*16), x = c.getContext('2d');
+  const img = x.createImageData(W*16, H*16), d = new Uint32Array(img.data.buffer);
+  for (let wy = 0; wy < H*16; wy++) for (let wx = 0; wx < W*16; wx++) d[wy*W*16 + wx] = groundPix(wx, wy);
+  x.putImageData(img, 0, 0);
+  const trees = TREES.map(t => spriteFromRows(t, 0));
+  for (let i = 0; i < W*H; i++) if (G.occ[i] === 1) x.drawImage(trees[G.treeVar[i]], (i % W)*16, ((i / W) | 0)*16);
+  G.stat = c; G.statCtx = x;
+}
+function removeTree(i){
+  G.occ[i] = 0; G.treeAmt[i] = 0;
+  const tx = i % G.W, ty = (i / G.W) | 0, img = G.statCtx.createImageData(16, 16), d = new Uint32Array(img.data.buffer);
+  for (let py = 0; py < 16; py++) for (let px = 0; px < 16; px++) d[py*16 + px] = groundPix(tx*16 + px, ty*16 + py);
+  G.statCtx.putImageData(img, tx*16, ty*16); miniDirty = true;
+}
+
+/* -------- Entités -------- */
+function addDeposit(tx, ty, amount){
+  const e = {id:nextId++, kind:'deposit', role:'deposit', team:-1, tx, ty, w:2, h:2, x:tx+1, z:ty+1, amount, hp:1, maxhp:1};
+  for (let y = ty; y < ty+2; y++) for (let x = tx; x < tx+2; x++){ G.occ[y*G.W+x] = 2; G.entAt[y*G.W+x] = e.id; }
+  G.ents.set(e.id, e); G.deposits.push(e); return e;
+}
+function addBuilding(role, team, tx, ty, built){
+  const d = BT[role];
+  const b = {id:nextId++, kind:'building', role, team, fac:G.teams[team].fac, tx, ty, w:d.w, h:d.h, x:tx+d.w/2, z:ty+d.h/2,
+             maxhp:d.hp, hp: built ? d.hp : d.hp*0.1, built, progress: built ? 1 : 0, queue:[], qt:0, cd:0, smokeT:Math.random()};
+  const code = role === 'wall' ? 3 : 2;
+  for (let y = ty; y < ty+d.h; y++) for (let x = tx; x < tx+d.w; x++){ const i = y*G.W+x; G.occ[i] = code; G.entAt[i] = b.id; if (code === 3) G.wallTeam[i] = team; }
+  G.ents.set(b.id, b); G.buildings.push(b); miniDirty = true; updatePop();
+  return b;
+}
+function spawnUnit(role, team, x, z){
+  const u = {id:nextId++, kind:'unit', role, team, fac:G.teams[team].fac, x, z, hp:UT[role].hp, maxhp:UT[role].hp, cd:0, state:'idle', path:[], pi:0,
+             target:null, prevTarget:null, carry:0, carryType:null, res:null, gatherT:0, left: team !== 0, scan:Math.random()*0.4, repath:0, amove:null, buildT:null, anim:Math.random()*2};
+  G.ents.set(u.id, u); G.units.push(u); return u;
+}
+function updatePop(){
+  if (!G) return;
+  for (const t of G.teams){ t.pop = 0; t.popCap = 0; }
+  for (const u of G.units) G.teams[u.team].pop += UT[u.role].pop;
+  for (const b of G.buildings){ const T = G.teams[b.team]; if (b.built && BT[b.role].pop) T.popCap += BT[b.role].pop; for (const q of b.queue) T.pop += UT[q].pop; }
+  for (const t of G.teams) t.popCap = Math.min(POP_MAX, t.popCap);
+}
+const canAfford = (team, c) => G.teams[team].a >= c.a && G.teams[team].m >= c.m;
+function pay(team, c){ G.teams[team].a -= c.a; G.teams[team].m -= c.m; }
+const hasBuilt = (team, role) => G.buildings.some(b => b.team === team && b.role === role && b.built);
+function canPlace(role, tx, ty, margin){
+  const d = BT[role], W = G.W, H = G.H;
+  if (tx < 1 || ty < 1 || tx + d.w > W-1 || ty + d.h > H-1) return false;
+  for (let y = ty - margin; y < ty + d.h + margin; y++) for (let x = tx - margin; x < tx + d.w + margin; x++){
+    if (x < 0 || y < 0 || x >= W || y >= H) continue;
+    const inside = x >= tx && y >= ty && x < tx+d.w && y < ty+d.h, o = G.occ[y*W+x];
+    if (inside ? o !== 0 : o >= 2) return false;
+  }
+  for (const u of G.units) if (u.x > tx-0.2 && u.x < tx+d.w+0.2 && u.z > ty-0.2 && u.z < ty+d.h+0.2) return false;
+  return true;
+}
+
+/* ================= Recherche de chemin ================= */
+let PF = null;
+function initPathfinder(W, H){ const N = W*H; PF = {g:new Float32Array(N), came:new Int32Array(N), stamp:new Uint32Array(N), closed:new Uint32Array(N), gen:0, hn:new Int32Array(N*4), hf:new Float32Array(N*4), hs:0}; }
+function walkT(x, y, team){ if (x < 0 || y < 0 || x >= G.W || y >= G.H) return false; const i = y*G.W+x, o = G.occ[i]; return o === 0 || (o === 3 && G.wallTeam[i] === team); }
+function walk(x, y){ return x >= 0 && y >= 0 && x < G.W && y < G.H && G.occ[y*G.W+x] === 0; }
+function hpush(n, f){ let i = PF.hs++; const hn = PF.hn, hf = PF.hf; while (i > 0){ const p = (i-1) >> 1; if (hf[p] <= f) break; hn[i] = hn[p]; hf[i] = hf[p]; i = p; } hn[i] = n; hf[i] = f; }
+function hpop(){ const hn = PF.hn, hf = PF.hf, top = hn[0]; const n = hn[--PF.hs], f = hf[PF.hs]; let i = 0;
+  for (;;){ let c = 2*i+1; if (c >= PF.hs) break; if (c+1 < PF.hs && hf[c+1] < hf[c]) c++; if (hf[c] >= f) break; hn[i] = hn[c]; hf[i] = hf[c]; i = c; } hn[i] = n; hf[i] = f; return top; }
+const DIRS = [[1,0,1],[-1,0,1],[0,1,1],[0,-1,1],[1,1,1.414],[1,-1,1.414],[-1,1,1.414],[-1,-1,1.414]];
+function findPath(sx, sy, r, tol, team, brk){
+  const W = G.W, H = G.H; sx = Math.max(0, Math.min(W-1, sx)); sy = Math.max(0, Math.min(H-1, sy));
+  const gen = ++PF.gen; PF.hs = 0;
+  const cx = (r.x0 + r.x1)/2, cy = (r.y0 + r.y1)/2;
+  const h = (x, y) => { const dx = Math.abs(x-cx), dy = Math.abs(y-cy); return Math.max(dx,dy) + 0.414*Math.min(dx,dy); };
+  const goal = (x, y) => Math.max(r.x0 - x, 0, x - r.x1, r.y0 - y, 0, y - r.y1) <= tol;
+  const pass = (x, y) => { if (walkT(x, y, team)) return 0; if (brk && x >= 0 && y >= 0 && x < W && y < H){ const i = y*W+x; if (G.occ[i] === 3 && G.wallTeam[i] !== team) return 7; } return -1; };
+  const s = sy*W + sx; PF.stamp[s] = gen; PF.g[s] = 0; PF.came[s] = -1; hpush(s, h(sx, sy));
+  let best = s, bestH = h(sx, sy), exp = 0;
+  while (PF.hs && exp < 6000){
+    const cur = hpop(); if (PF.closed[cur] === gen) continue; PF.closed[cur] = gen; exp++;
+    const x = cur % W, y = (cur / W) | 0;
+    if (goal(x, y) && (cur === s || walkT(x, y, team))){ best = cur; break; }
+    const hv = h(x, y); if (hv < bestH && (cur === s || walkT(x, y, team))){ bestH = hv; best = cur; }
+    for (const [dx, dy, c] of DIRS){
+      const nx = x+dx, ny = y+dy, p = pass(nx, ny); if (p < 0) continue;
+      if (dx && dy && (pass(x+dx, y) !== 0 || pass(x, y+dy) !== 0)) continue;
+      const ni = ny*W + nx; if (PF.closed[ni] === gen) continue;
+      const ng = PF.g[cur] + c + p;
+      if (PF.stamp[ni] !== gen || ng < PF.g[ni]){ PF.stamp[ni] = gen; PF.g[ni] = ng; PF.came[ni] = cur; hpush(ni, ng + h(nx, ny)); }
+    }
+  }
+  const out = []; let c = best;
+  while (c !== -1 && c !== s){ out.push([(c % W) + 0.5, ((c / W) | 0) + 0.5]); c = PF.came[c]; }
+  out.reverse(); return out;
+}
+const rectOf = e => e.kind === 'unit' ? {x0:Math.floor(e.x), y0:Math.floor(e.z), x1:Math.floor(e.x), y1:Math.floor(e.z)} : {x0:e.tx, y0:e.ty, x1:e.tx+e.w-1, y1:e.ty+e.h-1};
+function pathTo(u, r, tol){ u.path = findPath(Math.floor(u.x), Math.floor(u.z), r, tol, u.team, isMil(u)); u.pi = 0; u.repath = 1 + Math.random()*0.4; }
+function pathToPoint(u, x, z){ const tx = Math.floor(x), ty = Math.floor(z); pathTo(u, {x0:tx, y0:ty, x1:tx, y1:ty}, walkT(tx, ty, u.team) ? 0 : 1); }
+function distTo(u, e){
+  if (e.kind === 'unit') return Math.hypot(e.x - u.x, e.z - u.z) - UT[e.role].r;
+  const dx = Math.max(e.tx - u.x, 0, u.x - (e.tx + e.w)), dz = Math.max(e.ty - u.z, 0, u.z - (e.ty + e.h)); return Math.hypot(dx, dz);
+}
+function follow(u, dt){
+  if (u.pi >= u.path.length) return true;
+  const p = u.path[u.pi], ptx = Math.floor(p[0]), pty = Math.floor(p[1]);
+  if (!walkT(ptx, pty, u.team)){
+    const i = pty*G.W + ptx;
+    if (G.occ[i] === 3 && G.wallTeam[i] !== u.team && isMil(u)){ const w = G.ents.get(G.entAt[i]);
+      if (w){ if (u.state === 'attack' && u.target && u.target !== w) u.prevTarget = u.target; const am = u.amove; u.state = 'attack'; u.target = w; u.amove = am || {x:u.x, z:u.z, back:true}; u.path = []; return false; } }
+    u.path = []; u.pi = 0; return true;
+  }
+  const dx = p[0] - u.x, dz = p[1] - u.z, d = Math.hypot(dx, dz), step = UT[u.role].speed * dt;
+  if (Math.abs(dx) > 0.05) u.left = dx < 0; u.moving = true;
+  if (d <= step){ u.x = p[0]; u.z = p[1]; u.pi++; return u.pi >= u.path.length; }
+  u.x += dx/d*step; u.z += dz/d*step; return false;
+}
+function nudge(u, x, z, dt){ const dx = x - u.x, dz = z - u.z, d = Math.hypot(dx, dz) || 1, st = UT[u.role].speed*dt; tryShift(u, dx/d*st, dz/d*st); u.moving = true; }
+const REACH = 1.05;
+
+/* ================= Ordres ================= */
+function orderMove(u, x, z){ u.state = 'move'; u.target = null; u.prevTarget = null; u.amove = null; u.res = null; u.buildT = null; pathToPoint(u, x, z); }
+function orderAttackMove(u, x, z){ u.state = 'amove'; u.target = null; u.prevTarget = null; u.amove = {x, z}; u.res = null; u.buildT = null; pathToPoint(u, x, z); }
+function orderAttack(u, t){ u.state = 'attack'; u.target = t; u.prevTarget = null; u.res = null; u.buildT = null; u.repath = 0; u.path = []; }
+function orderGather(u, res){ u.res = res; u.state = 'gather'; u.target = null; u.amove = null; u.buildT = null; u.gatherT = 0; u.path = []; u.repath = 0; }
+function orderBuild(u, b){ u.state = 'build'; u.buildT = b; u.target = null; u.amove = null; u.res = null; pathTo(u, rectOf(b), 1); }
+function orderStop(u){ u.state = 'idle'; u.path = []; u.target = null; u.prevTarget = null; u.amove = null; u.res = null; u.buildT = null; }
+
+function nearestTree(x, z, maxR){
+  const W = G.W, H = G.H, cx = Math.floor(x), cy = Math.floor(z); let best = -1, bd = 1e9;
+  for (let y = Math.max(0, cy-maxR); y <= Math.min(H-1, cy+maxR); y++) for (let xx = Math.max(0, cx-maxR); xx <= Math.min(W-1, cx+maxR); xx++){
+    const i = y*W + xx; if (G.occ[i] !== 1) continue;
+    if (!(walk(xx+1,y) || walk(xx-1,y) || walk(xx,y+1) || walk(xx,y-1))) continue;
+    const d = (xx-cx)*(xx-cx) + (y-cy)*(y-cy); if (d < bd){ bd = d; best = i; }
+  }
+  return best < 0 ? null : {kind:'tree', tx: best % W, ty: (best / W) | 0};
+}
+function nearestDeposit(x, z){ let best = null, bd = 1e9; for (const d of G.deposits){ const dd = Math.hypot(d.x-x, d.z-z); if (dd < bd){ bd = dd; best = d; } } return best ? {kind:'dep', ent:best} : null; }
+function nearestDrop(team, x, z){ let best = null, bd = 1e9; for (const b of G.buildings){ if (b.team !== team || !b.built || !BT[b.role].drop) continue; const d = Math.hypot(b.x-x, b.z-z); if (d < bd){ bd = d; best = b; } } return best; }
+const resValid = r => !!r && (r.kind === 'tree' ? G.occ[r.ty*G.W + r.tx] === 1 : !r.ent.dead && r.ent.amount > 0);
+const resRect = r => r.kind === 'tree' ? {x0:r.tx, y0:r.ty, x1:r.tx, y1:r.ty} : rectOf(r.ent);
+function resDist(u, r){ const rc = resRect(r); return Math.hypot(Math.max(rc.x0 - u.x, 0, u.x - (rc.x1+1)), Math.max(rc.y0 - u.z, 0, u.z - (rc.y1+1))); }
+const fitsRes = (u, r) => (UT[u.role].gather === 'm' && r.kind === 'tree') || (UT[u.role].gather === 'a' && r.kind === 'dep');
+
+/* ================= Mise à jour des unités ================= */
+function enemyInSight(u, range){
+  let best = null, bd = range;
+  for (const e of G.units){ if (e.team === u.team) continue; const d = Math.hypot(e.x-u.x, e.z-u.z); if (d < bd){ bd = d; best = e; } }
+  if (best) return best;
+  for (const b of G.buildings){ if (b.team === u.team || b.role === 'wall') continue; const d = distTo(u, b); if (d < bd){ bd = d; best = b; } }
+  return best;
+}
+function updUnit(u, dt){
+  const S0 = UT[u.role]; u.cd -= dt; u.moving = false; u.repath -= dt;
+  switch (u.state){
+    case 'idle': { u.scan -= dt; if (isMil(u) && u.scan <= 0){ u.scan = 0.4; const e = enemyInSight(u, S0.sight); if (e){ orderAttack(u, e); u.amove = {x:u.x, z:u.z, leash:true}; } } break; }
+    case 'move': { if (follow(u, dt) && u.state === 'move') u.state = 'idle'; break; }
+    case 'amove': {
+      u.scan -= dt;
+      if (u.scan <= 0){ u.scan = 0.4; const e = enemyInSight(u, S0.sight); if (e){ const am = u.amove; orderAttack(u, e); u.amove = am; break; } }
+      if (follow(u, dt) && u.state === 'amove'){
+        if (Math.hypot(u.amove.x - u.x, u.amove.z - u.z) > 1.5 && u.repath <= 0) pathToPoint(u, u.amove.x, u.amove.z);
+        else if (Math.hypot(u.amove.x - u.x, u.amove.z - u.z) <= 1.5){ u.state = 'idle'; u.amove = null; }
+      }
+      break;
+    }
+    case 'attack': {
+      const t = u.target;
+      if (!t || t.dead){
+        if (u.prevTarget && !u.prevTarget.dead){ u.target = u.prevTarget; u.prevTarget = null; u.path = []; break; }
+        u.target = null;
+        if (isMil(u)){ const e = enemyInSight(u, S0.sight); if (e){ u.target = e; break; } }
+        const am = u.amove;
+        if (am && !am.leash && !am.back) orderAttackMove(u, am.x, am.z);
+        else if (am && am.leash && Math.hypot(am.x-u.x, am.z-u.z) > 1.5) orderMove(u, am.x, am.z);
+        else { u.state = 'idle'; u.amove = null; }
+        break;
+      }
+      const d = distTo(u, t);
+      if (d <= S0.range){
+        u.path = []; if (Math.abs(t.x - u.x) > 0.1) u.left = t.x < u.x;
+        if (u.cd <= 0) attack(u, t);
+      } else {
+        if (u.amove && u.amove.leash && Math.hypot(u.amove.x - u.x, u.amove.z - u.z) > 9){ const am = u.amove; u.amove = null; orderMove(u, am.x, am.z); break; }
+        if (u.repath <= 0 || u.pi >= u.path.length) pathTo(u, rectOf(t), t.kind === 'unit' ? 0 : 1);
+        follow(u, dt);
+      }
+      break;
+    }
+    case 'gather': {
+      if (u.carry >= CARRY){ u.state = 'return'; u.path = []; break; }
+      if (!resValid(u.res)){
+        const ox = u.res && u.res.kind === 'tree' ? u.res.tx : u.x, oz = u.res && u.res.kind === 'tree' ? u.res.ty : u.z;
+        const nr = S0.gather === 'm' ? nearestTree(ox, oz, 7) : nearestDeposit(u.x, u.z);
+        if (!nr){ u.state = u.carry ? 'return' : 'idle'; break; }
+        u.res = nr; u.path = []; u.gatherT = 0;
+      }
+      if (resDist(u, u.res) <= REACH){
+        u.path = []; const rc = resRect(u.res); u.left = (rc.x0+rc.x1+1)/2 < u.x;
+        u.gatherT += dt; u.working = true;
+        if (u.gatherT >= (u.res.kind === 'tree' ? 2.6 : 2.0)){
+          u.gatherT = 0; u.fails = 0; u.carry = CARRY; u.carryType = S0.gather;
+          if (u.res.kind === 'tree'){ const i = u.res.ty*G.W + u.res.tx; G.treeAmt[i] -= CARRY; if (G.treeAmt[i] <= 0) removeTree(i); }
+          else { u.res.ent.amount -= CARRY; if (u.res.ent.amount <= 0) killDeposit(u.res.ent); }
+          u.state = 'return'; u.path = [];
+        }
+      } else {
+        if (u.pi >= u.path.length){
+          pathTo(u, resRect(u.res), 1);
+          if (!u.path.length && resDist(u, u.res) < 2.2){ const rc = resRect(u.res); nudge(u, (rc.x0+rc.x1+1)/2, (rc.y0+rc.y1+1)/2, dt); break; }
+          if (!u.path.length){ u.fails = (u.fails || 0) + 1;
+            const nr = u.res.kind === 'tree' && u.fails < 4 ? nearestTree(u.x, u.z, 3 + u.fails*2) : null;
+            if (nr && !(nr.tx === u.res.tx && nr.ty === u.res.ty)) u.res = nr; else { u.fails = 0; u.state = 'idle'; } break; }
+        }
+        follow(u, dt);
+      }
+      break;
+    }
+    case 'return': {
+      const b = nearestDrop(u.team, u.x, u.z);
+      if (!b){ u.state = 'idle'; break; }
+      if (distTo(u, b) <= REACH){
+        const T = G.teams[u.team], bonus = T.ai ? G.cfg.aiBonus : 1;
+        T[u.carryType] += Math.round(u.carry * bonus);
+        u.carry = 0; u.carryType = null; u.path = []; u.state = u.res ? 'gather' : 'idle';
+      } else {
+        if (u.pi >= u.path.length || u.retarget !== b.id){ u.retarget = b.id; pathTo(u, rectOf(b), 1); if (!u.path.length){ if (distTo(u, b) < 2.2){ nudge(u, b.x, b.z, dt); break; } u.state = 'idle'; break; } }
+        follow(u, dt);
+      }
+      break;
+    }
+    case 'build': {
+      const b = u.buildT;
+      if (!b || b.dead || b.built){ u.state = 'idle'; u.buildT = null; nextBuild(u); break; }
+      if (distTo(u, b) <= REACH){
+        u.path = []; u.working = true; u.left = b.x < u.x;
+        const inc = dt / BT[b.role].time;
+        b.progress = Math.min(1, b.progress + inc); b.hp = Math.min(b.maxhp, b.hp + b.maxhp*0.9*inc);
+        if (b.progress >= 1){ b.built = true; updatePop(); if (b.team === 0 && b.role !== 'wall'){ toast('Construction terminée : ' + NAMES[b.fac][b.role]); refreshPanel(true); } u.state = 'idle'; u.buildT = null; nextBuild(u); }
+      } else {
+        if (u.pi >= u.path.length){ pathTo(u, rectOf(b), 1); if (!u.path.length){ if (distTo(u, b) < 2.2){ nudge(u, b.x, b.z, dt); break; } u.state = 'idle'; break; } }
+        follow(u, dt);
+      }
+      break;
+    }
+  }
+}
+function nextBuild(u){
+  let best = null, bd = 10;
+  for (const b of G.buildings){ if (b.team !== u.team || b.built) continue; const d = Math.hypot(b.x - u.x, b.z - u.z); if (d < bd){ bd = d; best = b; } }
+  if (best) orderBuild(u, best);
+}
+
+/* ================= Combat ================= */
+function attack(src, t){
+  const S0 = src.kind === 'unit' ? UT[src.role] : BT[src.role].atk;
+  src.cd = S0.cd;
+  if (src.kind === 'unit' && !S0.proj){ hit(t, S0.dmg * (t.kind === 'building' ? (S0.vsB || 1) : 1), src); src.swing = 0.15; return; }
+  const sx = src.x, sz = src.kind === 'unit' ? src.z - 0.4 : src.z - (src.fac === 'nature' ? 1.4 : 0.6);
+  const siege = src.kind === 'unit' && src.role === 'siege';
+  const kind = siege ? (src.fac === 'nature' ? 'rock' : 'shell') : (src.fac === 'nature' ? 'arrow' : 'bullet');
+  const dist = Math.hypot(t.x - sx, t.z - sz);
+  G.proj.push({kind, x0:sx, z0:sz, tx:t.x, tz:t.z, target: siege ? null : t, t:0, dur: siege ? 0.9 : dist / (kind === 'arrow' ? 14 : 28), dmg:S0.dmg, splash:S0.splash || 0, vsB:S0.vsB || 1, team:src.team, src});
+  if (kind === 'bullet' || kind === 'shell') G.fx.push({kind:'flash', x:sx + (t.x > sx ? 0.4 : -0.4), z:sz, t:0, life:0.08});
+}
+function hit(t, dmg, src){
+  if (!t || t.dead) return;
+  t.hp -= dmg; t.flash = 0.12;
+  const T = G.teams[t.team]; if (T && src) T.alert = {x:src.x, z:src.z, t:G.time};
+  if (t.kind === 'unit' && isMil(t) && src && !src.dead && (t.state === 'idle' || (T.ai && t.state === 'move'))){ orderAttack(t, src); t.amove = {x:t.x, z:t.z, leash:true}; }
+  if (t.hp <= 0) kill(t);
+}
+function updProj(dt){
+  for (let i = G.proj.length - 1; i >= 0; i--){
+    const p = G.proj[i]; p.t += dt;
+    if (p.target && !p.target.dead){ p.tx = p.target.x; p.tz = p.target.z; }
+    if (p.t >= p.dur){
+      G.proj.splice(i, 1);
+      if (p.splash){
+        G.fx.push({kind:'boom', x:p.tx, z:p.tz, t:0, life:0.45, size:1});
+        for (const u of G.units.slice()) if (u.team !== p.team && Math.hypot(u.x - p.tx, u.z - p.tz) <= p.splash) hit(u, p.dmg, p.src);
+        for (const b of G.buildings.slice()) if (b.team !== p.team && distTo({x:p.tx, z:p.tz}, b) <= p.splash*0.6) hit(b, p.dmg * p.vsB, p.src);
+      } else if (p.target && !p.target.dead) hit(p.target, p.dmg * (p.target.kind === 'building' ? p.vsB : 1), p.src);
+    }
+  }
+}
+function kill(e){
+  if (e.dead) return; e.dead = true;
+  if (e.kind === 'unit'){
+    G.units.splice(G.units.indexOf(e), 1); G.ents.delete(e.id);
+    G.dying.push({e, t:0});
+    if (e.fac === 'pollution' || e.role === 'siege') G.fx.push({kind:'boom', x:e.x, z:e.z, t:0, life:0.4, size:0});
+  } else {
+    G.buildings.splice(G.buildings.indexOf(e), 1); G.ents.delete(e.id);
+    for (let y = e.ty; y < e.ty+e.h; y++) for (let x = e.tx; x < e.tx+e.w; x++){ const i = y*G.W+x; G.occ[i] = 0; G.entAt[i] = 0; G.wallTeam[i] = -1; }
+    G.fx.push({kind:'boom', x:e.x, z:e.z, t:0, life:0.7, size:Math.max(e.w, e.h)});
+    G.fx.push({kind:'rubble', x:e.tx, z:e.ty, w:e.w, h:e.h, t:0, life:6});
+    for (let k = 0; k < 6 + e.w*4; k++) G.parts.push({x:e.x*16 + (Math.random()-0.5)*e.w*12, y:e.z*16 + (Math.random()-0.5)*e.h*10, vx:(Math.random()-0.5)*50, vy:-30 - Math.random()*50, g:120, life:0.9, t:0, col: k % 3 ? '#555555' : '#FFAA00', s:2});
+    miniDirty = true; checkElimination();
+  }
+  const si = selection.indexOf(e); if (si >= 0){ selection.splice(si, 1); refreshPanel(true); }
+  updatePop();
+}
+function killDeposit(d){
+  d.dead = true; G.deposits.splice(G.deposits.indexOf(d), 1); G.ents.delete(d.id);
+  for (let y = d.ty; y < d.ty+2; y++) for (let x = d.tx; x < d.tx+2; x++){ G.occ[y*G.W+x] = 0; G.entAt[y*G.W+x] = 0; }
+  miniDirty = true;
+}
+
+/* ================= Bâtiments : production, tours, fumée ================= */
+function enqueue(b, role){
+  const T = G.teams[b.team], S0 = UT[role];
+  if (!b.built || b.queue.length >= 5) return 'File pleine';
+  if (!canAfford(b.team, S0.cost)) return 'Ressources insuffisantes';
+  if (T.pop + S0.pop > T.popCap) return 'Population maximale : construisez un logement';
+  pay(b.team, S0.cost); b.queue.push(role); updatePop(); return null;
+}
+function updBuilding(b, dt){
+  if (!b.built) return;
+  const sm = SMOKE[b.fac] && SMOKE[b.fac][b.role];
+  if (sm){ b.smokeT -= dt; if (b.smokeT <= 0){ b.smokeT = 0.35 + Math.random()*0.2; const spr = bldSprite(b.fac, b.role, b.team);
+      for (const [ox, oy] of sm) if (G.parts.length < 260) G.parts.push({x:b.tx*16 + ox + 3, y:b.ty*16 - spr.et + oy, vx:4 + Math.random()*4, vy:-9 - Math.random()*4, g:0, life:2.6, t:0, col: Math.random() < 0.5 ? '#AAAAAA' : '#555555', s:2, grow:true}); } }
+  const atk = BT[b.role].atk;
+  if (atk){ b.cd -= dt; if (b.cd <= 0){ let best = null, bd = atk.range; for (const u of G.units){ if (u.team === b.team) continue; const d = Math.hypot(u.x - b.x, u.z - b.z); if (d < bd){ bd = d; best = u; } } if (best) attack(b, best); else b.cd = 0.3; } }
+  if (!b.queue.length) return;
+  b.qt += dt;
+  const role = b.queue[0];
+  if (b.qt >= UT[role].time){
+    const spot = freeAround(b); if (!spot) return;
+    b.qt = 0; b.queue.shift();
+    const u = spawnUnit(role, b.team, spot[0], spot[1]); updatePop();
+    if (b.team === 0){ refreshPanel(true); applyRally(u, b); } else aiOnSpawn(u, b);
+  }
+}
+function applyRally(u, b){
+  const r = b.rally; if (!r) return;
+  if (r.res && UT[u.role].gather){
+    if (resValid(r.res) && fitsRes(u, r.res)) { orderGather(u, r.res); return; }
+    const nr = UT[u.role].gather === 'm' ? nearestTree(r.x, r.z, 8) : nearestDeposit(r.x, r.z); if (nr){ orderGather(u, nr); return; }
+  }
+  orderMove(u, r.x + (Math.random()-0.5)*1.2, r.z + (Math.random()-0.5)*1.2);
+}
+function freeAround(b){
+  for (let r = 1; r <= 3; r++){
+    const cand = [];
+    for (let y = b.ty - r; y < b.ty + b.h + r; y++) for (let x = b.tx - r; x < b.tx + b.w + r; x++){
+      if (x > b.tx - r && x < b.tx + b.w + r - 1 && y > b.ty - r && y < b.ty + b.h + r - 1) continue;
+      if (!walk(x, y)) continue;
+      const cx = x + 0.5, cz = y + 0.5;
+      if (G.units.some(u => Math.hypot(u.x - cx, u.z - cz) < 0.45)) continue;
+      const pr = b.rally ? Math.hypot(b.rally.x - cx, b.rally.z - cz) : ((y >= b.ty + b.h) ? 0 : 1);
+      cand.push([cx, cz, pr]);
+    }
+    if (cand.length){ cand.sort((p, q) => p[2] - q[2]); return cand[0]; }
+  }
+  return null;
+}
+
+/* ================= Zones et fin de partie ================= */
+function updZones(dt){
+  for (const z of G.zones){
+    const present = new Map();
+    for (const u of G.units){ if (!isMil(u)) continue; if (Math.hypot(u.x - z.x, u.z - z.z) <= z.r) present.set(u.team, (present.get(u.team) || 0) + 1); }
+    if (present.size === 1){
+      const [T, n] = present.entries().next().value; const amt = 9 * Math.min(n, 4) * dt;
+      if (z.owner === T) z.cval = Math.min(100, z.cval + amt);
+      else if (z.cteam === T || z.cteam === -1){ z.cteam = T; z.cval += amt; if (z.cval >= 100){ z.cval = 100; z.owner = T; if (T === 0) toast('Zone capturée'); miniDirty = true; } }
+      else { z.cval -= amt; if (z.cval <= 0){ if (z.owner === 0) toast('Zone perdue'); z.cval = 0; z.cteam = T; z.owner = -1; miniDirty = true; } }
+    } else if (present.size === 0){
+      if (z.owner >= 0) z.cval = Math.min(100, z.cval + 5*dt); else { z.cval = Math.max(0, z.cval - 4*dt); if (z.cval === 0) z.cteam = -1; }
+    }
+    if (z.owner >= 0) G.teams[z.owner].a += ZONE_INCOME * dt * (G.teams[z.owner].ai ? G.cfg.aiBonus : 1);
+  }
+  for (const t of G.teams){
+    if (!t.alive){ t.hold = 0; continue; }
+    if (G.zones.every(z => z.owner === t.id)) t.hold += dt; else t.hold = 0;
+    if (t.hold >= HOLD_TIME){ endGame(t.id === 0, t.id === 0 ? 'Vous avez tenu toutes les zones pendant 60 secondes.' : `Les ${TEAM_NAME[t.id]} ont tenu toutes les zones pendant 60 secondes.`); return; }
+  }
+}
+function checkElimination(){
+  for (const t of G.teams){
+    if (!t.alive) continue;
+    if (!G.buildings.some(b => b.team === t.id && b.role !== 'wall')){
+      t.alive = false;
+      for (const b of G.buildings.filter(b => b.team === t.id)) kill(b);
+      if (t.id === 0){ endGame(false, 'Tous vos bâtiments ont été détruits.'); return; }
+      toast(`Les ${TEAM_NAME[t.id]} sont éliminés`);
+    }
+  }
+  if (G.teams.slice(1).every(t => !t.alive)) endGame(true, G.cfg.enemies > 1 ? 'Toutes les armées adverses ont été éliminées.' : "L'armée adverse a été éliminée.");
+}
+
+/* ================= IA ================= */
+let AI_SPOTS = null;
+function aiSpots(){ if (AI_SPOTS) return AI_SPOTS; const s = []; for (let dy = -14; dy <= 14; dy++) for (let dx = -14; dx <= 14; dx++){ const d = Math.hypot(dx, dy); if (d >= 3 && d <= 14) s.push([dx, dy, d]); } s.sort((a, b) => a[2] - b[2]); return (AI_SPOTS = s); }
+function aiPlace(role, hq, toward){
+  const d = BT[role]; let spots = aiSpots();
+  if (toward) spots = spots.slice().sort((a, b) => (a[2] - (a[0]*toward[0] + a[1]*toward[1])*0.5) - (b[2] - (b[0]*toward[0] + b[1]*toward[1])*0.5));
+  for (const [dx, dy] of spots){ const tx = Math.round(hq.x + dx - d.w/2), ty = Math.round(hq.z + dy - d.h/2); if (canPlace(role, tx, ty, 1)) return [tx, ty]; }
+  return null;
+}
+function aiBuild(t, role, workers, hq, toward){
+  const cost = BT[role].cost; if (!canAfford(t.id, cost)) return false;
+  const spot = aiPlace(role, hq, toward); if (!spot) return false;
+  const w = workers.filter(u => u.state !== 'build').sort((a, b) => (a.carry - b.carry) || (Math.hypot(a.x-hq.x,a.z-hq.z) - Math.hypot(b.x-hq.x,b.z-hq.z)))[0];
+  if (!w) return false;
+  pay(t.id, cost); const b = addBuilding(role, t.id, spot[0], spot[1], false); orderBuild(w, b); return true;
+}
+function aiOnSpawn(u, b){
+  if (!isMil(u)){ aiAssignWorker(u); return; }
+  const cx = G.W/2, cz = G.H/2, dx = cx - b.x, dz = cz - b.z, d = Math.hypot(dx, dz) || 1;
+  orderMove(u, b.x + dx/d*5 + (Math.random()-0.5)*3, b.z + dz/d*5 + (Math.random()-0.5)*3);
+}
+function aiAssignWorker(u){ const res = UT[u.role].gather === 'm' ? nearestTree(u.x, u.z, 14) : nearestDeposit(u.x, u.z); if (res) orderGather(u, res); }
+function aiThink(t){
+  const mine = G.buildings.filter(b => b.team === t.id);
+  const hq = mine.find(b => b.role === 'hq' && b.built) || mine.find(b => b.built && b.role !== 'wall');
+  if (!hq) return;
+  const units = G.units.filter(u => u.team === t.id), workers = units.filter(u => !isMil(u)), mil = units.filter(isMil), lvl = G.cfg.n;
+  for (const w of workers) if (w.state === 'idle') aiAssignWorker(w);
+  const hqs = mine.filter(b => b.role === 'hq' && b.built);
+  const nW = workers.filter(w => w.role === 'wood').length + mine.reduce((s, b) => s + b.queue.filter(q => q === 'wood').length, 0);
+  const nO = workers.filter(w => w.role === 'ore').length + mine.reduce((s, b) => s + b.queue.filter(q => q === 'ore').length, 0);
+  if (nW + nO < 7 + Math.min(lvl, 4)) for (const h of hqs) if (!h.queue.length) enqueue(h, nO <= nW ? 'ore' : 'wood');
+  const pending = mine.filter(b => !b.built);
+  for (const p of pending){ if (!workers.some(w => w.buildT === p)){ const w = workers.filter(x => x.state !== 'build').sort((a, c) => Math.hypot(a.x-p.x,a.z-p.z) - Math.hypot(c.x-p.x,c.z-p.z))[0]; if (w) orderBuild(w, p); } }
+  const has = r => mine.some(b => b.role === r), count = r => mine.filter(b => b.role === r).length;
+  const dxm = G.W/2 - hq.x, dzm = G.H/2 - hq.z, dm = Math.hypot(dxm, dzm) || 1, toward = [dxm/dm, dzm/dm];
+  if (!pending.length){
+    if (t.popCap < POP_MAX && t.popCap - t.pop <= 3) aiBuild(t, 'house', workers, hq);
+    else if (!has('barracks') && workers.length >= 5) aiBuild(t, 'barracks', workers, hq);
+    else if (has('barracks') && !has('workshop') && G.time > 150) aiBuild(t, 'workshop', workers, hq);
+    else if (count('tower') < G.cfg.towers && has('barracks') && G.time > 180) aiBuild(t, 'tower', workers, hq, toward);
+    else if (count('barracks') < 2 && lvl >= 2 && G.time > 260) aiBuild(t, 'barracks', workers, hq);
+    else if (!has('depot') && G.time > 200) aiBuild(t, 'depot', workers, hq);
+  }
+  const milQueued = mine.reduce((s, b) => s + b.queue.filter(q => q !== 'wood' && q !== 'ore').length, 0);
+  for (const b of mine){
+    if (mil.length + milQueued >= G.cfg.milCap) break;
+    if (!b.built || b.queue.length >= G.cfg.milQueue) continue;
+    if (b.role === 'barracks') enqueue(b, Math.random() < 0.65 ? 'ranged' : 'fast');
+    if (b.role === 'workshop' && Math.random() < 0.5) enqueue(b, 'siege');
+  }
+  if (t.alert && G.time - t.alert.t < 4 && Math.hypot(t.alert.x - hq.x, t.alert.z - hq.z) < 16){
+    for (const u of mil) if (u.state !== 'attack' && Math.hypot(u.x - hq.x, u.z - hq.z) < 22) orderAttackMove(u, t.alert.x, t.alert.z);
+  }
+  const idle = mil.filter(u => u.state === 'idle');
+  if (G.time >= t.nextCap && idle.length >= 3){
+    t.nextCap = G.time + 22;
+    const targets = G.zones.filter(z => z.owner !== t.id).sort((a, b) => Math.hypot(a.x-hq.x, a.z-hq.z) - Math.hypot(b.x-hq.x, b.z-hq.z));
+    if (targets.length){ const z = targets[0]; for (const u of idle.slice(0, 3)) orderAttackMove(u, z.x + (Math.random()-0.5)*2, z.z + (Math.random()-0.5)*2); }
+  }
+  if (G.time >= t.nextWave){
+    const army = mil.filter(u => u.state === 'idle' || u.state === 'move');
+    if (army.length >= G.cfg.waveMin){
+      t.nextWave = G.time + G.cfg.waveEvery;
+      let target = null, bd = 1e9;
+      for (const b of G.buildings){ if (b.team === t.id || b.role === 'wall') continue; const d = Math.hypot(b.x-hq.x, b.z-hq.z); if (d < bd){ bd = d; target = b; } }
+      if (target) for (const u of army) orderAttackMove(u, target.x + (Math.random()-0.5)*2, target.z + (Math.random()-0.5)*2);
+    } else t.nextWave = G.time + 15;
+  }
+}
+
+/* ================= Caméra ================= */
+let camX = 0, camY = 0;
+function clampCam(){
+  if (!G) return; const mw = G.W*16, mh = G.H*16, m = 40/S;
+  camX = mw + 2*m < BW ? (mw - BW)/2 : Math.max(-m, Math.min(mw - BW + m*2.5, camX));
+  camY = mh + 2*m < BH ? (mh - BH)/2 : Math.max(-m*1.2, Math.min(mh - BH + m*3, camY));
+}
+const toWorld = (sx, sy) => ({x:(camX + sx/S)/16, z:(camY + sy/S)/16});
+const toScreen = (x, z) => [(x*16 - camX)*S, (z*16 - camY)*S];
+
+/* ================= Sélection et commandes ================= */
+let selection = [], buildMode = null, wallStart = null, rallyMode = false, lastTapId = 0, lastTapAt = 0, hover = null;
+function setSelection(list){ selection = list.filter(e => e && !e.dead); buildMode = null; wallStart = null; rallyMode = false; refreshPanel(true); }
+function pick(sx, sy){
+  const w = toWorld(sx, sy); let best = null, bd = 0.9;
+  for (const u of G.units){ const d = Math.hypot(u.x - w.x, (u.z - 0.3) - w.z); if (d < bd){ bd = d; best = u; } }
+  if (best) return {ent:best, g:w};
+  for (const off of [0, 0.5, 1.0]){
+    const tx = Math.floor(w.x), ty = Math.floor(w.z + off);
+    if (tx < 0 || ty < 0 || tx >= G.W || ty >= G.H) continue;
+    const o = G.occ[ty*G.W + tx];
+    if (o >= 2){ const e = G.ents.get(G.entAt[ty*G.W + tx]); if (e) return {ent:e, g:w}; }
+    if (off === 0 && o === 1) return {tree:{kind:'tree', tx, ty}, g:w};
+  }
+  return {g:w};
+}
+const ownUnits = () => selection.filter(e => e.kind === 'unit' && e.team === 0);
+function wallLine(a, b){
+  const out = [], sx = Math.sign(b.tx - a.tx), sy = Math.sign(b.ty - a.ty);
+  let x = a.tx, y = a.ty; out.push([x, y]);
+  while (x !== b.tx){ x += sx; out.push([x, y]); }
+  while (y !== b.ty){ y += sy; out.push([x, y]); }
+  return out;
+}
+function placeWalls(a, b, team = 0, workers = null){
+  const tiles = wallLine(a, b).filter(([x, y]) => canPlace('wall', x, y, 0));
+  const ws = workers || ownUnits().filter(u => !isMil(u));
+  const cost = BT.wall.cost, placed = [];
+  for (const [x, y] of tiles){ if (!canAfford(team, cost)) break; pay(team, cost); placed.push(addBuilding('wall', team, x, y, false)); }
+  if (!placed.length){ if (team === 0) toast(tiles.length ? 'Pas assez de bois' : 'Emplacement occupé'); return 0; }
+  if (team === 0 && placed.length < tiles.length) toast(`Bois insuffisant : ${placed.length} segment${placed.length > 1 ? 's' : ''} sur ${tiles.length}`);
+  ws.forEach((u, i) => orderBuild(u, placed[Math.min(placed.length-1, Math.floor(i * placed.length / ws.length))]));
+  return placed.length;
+}
+function handleTap(sx, sy){
+  if (!G || G.over) return;
+  const hit0 = pick(sx, sy), g = hit0.g;
+  if (rallyMode){
+    const b = selection[0];
+    if (b && b.kind === 'building'){ const res = hit0.tree || (hit0.ent && hit0.ent.kind === 'deposit' ? {kind:'dep', ent:hit0.ent} : null); b.rally = {x:g.x, z:g.z, res}; toast('Drapeau de ralliement planté'); }
+    rallyMode = false; refreshPanel(true); return;
+  }
+  if (buildMode){
+    const d = BT[buildMode];
+    if (buildMode === 'wall'){
+      const tt = {tx:Math.floor(g.x), ty:Math.floor(g.z)};
+      if (!wallStart){ wallStart = tt; refreshPanel(true); return; }
+      placeWalls(wallStart, tt); wallStart = null; buildMode = null; refreshPanel(true); return;
+    }
+    const tx = Math.round(g.x - d.w/2), ty = Math.round(g.z - d.h/2);
+    if (!canPlace(buildMode, tx, ty, 0)){ toast('Emplacement occupé'); return; }
+    if (!canAfford(0, d.cost)){ toast('Ressources insuffisantes'); buildMode = null; refreshPanel(true); return; }
+    const ws = ownUnits().filter(u => !isMil(u)); if (!ws.length){ buildMode = null; refreshPanel(true); return; }
+    pay(0, d.cost); const b = addBuilding(buildMode, 0, tx, ty, false);
+    ws.sort((a, c) => Math.hypot(a.x-b.x, a.z-b.z) - Math.hypot(c.x-b.x, c.z-b.z)); orderBuild(ws[0], b);
+    buildMode = null; refreshPanel(true); return;
+  }
+  const sb0 = selection[0];
+  if (selection.length === 1 && sb0.kind === 'building' && sb0.team === 0 && sb0.built && BT[sb0.role].train && (!hit0.ent || hit0.ent.kind === 'deposit')){
+    const res = hit0.tree || (hit0.ent ? {kind:'dep', ent:hit0.ent} : null); sb0.rally = {x:g.x, z:g.z, res}; toast('Drapeau de ralliement planté'); return;
+  }
+  const mine = ownUnits(), now = performance.now(), e = hit0.ent;
+  if (e && e.kind === 'unit' && e.team === 0){
+    if (lastTapId === e.id && now - lastTapAt < 380){
+      setSelection(G.units.filter(u => { if (u.team !== 0 || u.role !== e.role) return false; const [px, py] = toScreen(u.x, u.z); return px >= 0 && py >= 0 && px <= VW && py <= VH; }));
+    } else setSelection([e]);
+    lastTapId = e.id; lastTapAt = now; return;
+  }
+  lastTapId = 0;
+  if (mine.length){
+    if (e && e.team > 0){ for (const u of mine) orderAttack(u, e); marker(e.x, e.z, '#FF5555'); return; }
+    if (e && e.kind === 'building' && e.team === 0){
+      const ws = mine.filter(u => !isMil(u));
+      if (!e.built && ws.length){ for (const u of ws) orderBuild(u, e); marker(e.x, e.z, '#55FF55'); return; }
+      if (BT[e.role].drop && ws.some(u => u.carry)){ for (const u of ws) if (u.carry){ u.state = 'return'; u.path = []; } return; }
+      if (e.role !== 'wall'){ setSelection([e]); return; }
+    }
+    const res = hit0.tree || (e && e.kind === 'deposit' ? {kind:'dep', ent:e} : null);
+    if (res){
+      const fit = mine.filter(u => UT[u.role].gather && fitsRes(u, res)), rest = mine.filter(u => !fit.includes(u));
+      for (const u of fit) orderGather(u, res);
+      if (rest.length) formationMove(rest, g.x, g.z);
+      if (!fit.length && mine.some(u => UT[u.role].gather)) toast(res.kind === 'tree' ? `Le bois se récolte avec : ${NAMES[camp].wood}` : `Le minerai se récolte avec : ${NAMES[camp].ore}`);
+      marker(res.kind === 'tree' ? res.tx + 0.5 : res.ent.x, res.kind === 'tree' ? res.ty + 0.5 : res.ent.z, '#FFFF55'); return;
+    }
+    formationMove(mine, g.x, g.z); marker(g.x, g.z, '#55FF55'); return;
+  }
+  if (e){ if (!(selection.length === 1 && selection[0] === e)) setSelection([e]); return; }
+  setSelection([]);
+}
+function formationMove(units, x, z){ const n = units.length, cols = Math.ceil(Math.sqrt(n)), sp = 0.85;
+  units.forEach((u, i) => { const cx = (i % cols) - (cols-1)/2, cz = Math.floor(i / cols) - (Math.ceil(n/cols)-1)/2; orderMove(u, x + cx*sp, z + cz*sp); }); }
+function boxSelect(x0, y0, x1, y1){
+  const minX = Math.min(x0, x1), maxX = Math.max(x0, x1), minY = Math.min(y0, y1), maxY = Math.max(y0, y1);
+  const list = G.units.filter(u => { if (u.team !== 0) return false; const [px, py] = toScreen(u.x, u.z - 0.3); return px >= minX && px <= maxX && py >= minY && py <= maxY; });
+  if (list.length) setSelection(list); else toast('Aucune unité dans le cadre');
+}
+function marker(x, z, col){ G.fx.push({kind:'mark', x, z, col, t:0, life:0.5}); }
+
+/* ================= Entrées ================= */
+const ptrs = new Map(); let mode = 'none', tapStart = null; const boxEl = $('#box');
+function showBox(a, b){ boxEl.hidden = false; boxEl.style.left = Math.min(a.x, b.x) + 'px'; boxEl.style.top = Math.min(a.y, b.y) + 'px'; boxEl.style.width = Math.abs(a.x - b.x) + 'px'; boxEl.style.height = Math.abs(a.y - b.y) + 'px'; }
+view.addEventListener('pointerdown', ev => {
+  if (!G || paused()) return;
+  view.setPointerCapture?.(ev.pointerId);
+  ptrs.set(ev.pointerId, {x:ev.clientX, y:ev.clientY, sx:ev.clientX, sy:ev.clientY, cx:camX, cy:camY});
+  if (ptrs.size === 1){ tapStart = {t:performance.now(), id:ev.pointerId}; mode = (ev.pointerType === 'mouse' && ev.shiftKey) ? 'mbox' : 'maybe'; }
+  else if (ptrs.size === 2){ mode = 'box'; const [a, b] = [...ptrs.values()]; showBox(a, b); }
+});
+view.addEventListener('pointermove', ev => {
+  if (ev.pointerType === 'mouse') hover = {x:ev.clientX, y:ev.clientY};
+  const p = ptrs.get(ev.pointerId); if (!p) return;
+  p.x = ev.clientX; p.y = ev.clientY;
+  if (mode === 'maybe' && Math.hypot(p.x - p.sx, p.y - p.sy) > 9) mode = 'pan';
+  if (mode === 'pan'){ camX = p.cx - (p.x - p.sx)/S; camY = p.cy - (p.y - p.sy)/S; clampCam(); }
+  else if (mode === 'box'){ const [a, b] = [...ptrs.values()]; if (a && b) showBox(a, b); }
+  else if (mode === 'mbox') showBox({x:p.sx, y:p.sy}, p);
+});
+function endPtr(ev){
+  const p = ptrs.get(ev.pointerId); if (!p) return;
+  if (mode === 'maybe' && tapStart && tapStart.id === ev.pointerId && performance.now() - tapStart.t < 600) handleTap(p.x, p.y);
+  else if (mode === 'box' && ptrs.size === 2){ const [a, b] = [...ptrs.values()]; boxEl.hidden = true; if (Math.abs(a.x - b.x) > 10 || Math.abs(a.y - b.y) > 10) boxSelect(a.x, a.y, b.x, b.y); mode = 'done'; }
+  else if (mode === 'mbox'){ boxEl.hidden = true; boxSelect(p.sx, p.sy, p.x, p.y); mode = 'done'; }
+  ptrs.delete(ev.pointerId);
+  if (!ptrs.size){ mode = 'none'; boxEl.hidden = true; } else if (mode === 'pan' || mode === 'maybe') mode = 'done';
+}
+view.addEventListener('pointerup', endPtr);
+view.addEventListener('pointercancel', ev => { ptrs.delete(ev.pointerId); if (!ptrs.size){ mode = 'none'; boxEl.hidden = true; } });
+view.addEventListener('pointerleave', () => { hover = null; });
+view.addEventListener('contextmenu', ev => ev.preventDefault());
+const keys = new Set();
+addEventListener('keydown', ev => { keys.add(ev.key.toLowerCase()); if (ev.key === 'Escape' && G){ if (buildMode || rallyMode){ buildMode = null; wallStart = null; rallyMode = false; refreshPanel(true); } else setSelection([]); } });
+addEventListener('keyup', ev => keys.delete(ev.key.toLowerCase()));
+
+/* ================= Dessin du monde ================= */
+function drawHp(x, px, py, w, f, col){ R(x, '#000000', px-1, py-1, w+2, 4); R(x, '#550000', px, py, w, 2); R(x, col || (f > 0.5 ? '#55FF55' : f > 0.25 ? '#FFFF55' : '#FF5555'), px, py, Math.max(1, Math.round(w*f)), 2); }
+function brackets(x, a, b, w, h, col){ const L = 3; R(x, col, a, b, L, 1); R(x, col, a, b, 1, L); R(x, col, a+w-L, b, L, 1); R(x, col, a+w-1, b, 1, L); R(x, col, a, b+h-1, L, 1); R(x, col, a, b+h-L, 1, L); R(x, col, a+w-L, b+h-1, L, 1); R(x, col, a+w-1, b+h-L, 1, L); }
+function drawFlag(x, px, py, col, t){ R(x, '#000000', px-1, py-13, 3, 14); R(x, '#FFFFFF', px, py-12, 1, 12); const wv = Math.floor(t*4) % 2; ORect(x, px+1, py-12 + wv, 7, 5, col); R(x, '#000000', px-2, py, 5, 1); }
+function wallMask(b){
+  const W = G.W, at = (x, y) => x >= 0 && y >= 0 && x < W && y < G.H && G.occ[y*W+x] === 3 && G.wallTeam[y*W+x] === b.team;
+  return (at(b.tx, b.ty-1) ? 1 : 0) | (at(b.tx+1, b.ty) ? 2 : 0) | (at(b.tx, b.ty+1) ? 4 : 0) | (at(b.tx-1, b.ty) ? 8 : 0);
+}
+function render(){
+  const x = vctx, ox = Math.round(camX), oy = Math.round(camY), t = G.time, sel = new Set(selection);
+  R(x, '#000000', 0, 0, BW, BH);
+  const sx0 = Math.max(0, ox), sy0 = Math.max(0, oy), sx1 = Math.min(G.W*16, ox + BW), sy1 = Math.min(G.H*16, oy + BH);
+  if (sx1 > sx0 && sy1 > sy0) x.drawImage(G.stat, sx0, sy0, sx1-sx0, sy1-sy0, sx0-ox, sy0-oy, sx1-sx0, sy1-sy0);
+  for (const f of G.fx) if (f.kind === 'rubble'){ for (let i = 0; i < f.w*f.h*6; i++){ const h = hh(f.x*31 + i, f.z*17 + i); R(x, h % 3 ? '#555555' : '#000000', f.x*16 + (h % (f.w*16)) - ox, f.z*16 + ((h >> 8) % (f.h*16)) - oy, 2, 2); } }
+  for (const z of G.zones){
+    const cx = Math.round(z.x*16) - ox, cy = Math.round(z.z*16) - oy, rr = z.r*16;
+    if (cx < -60 || cy < -60 || cx > BW+60 || cy > BH+60) continue;
+    const col = z.owner >= 0 ? TEAM_CSS[z.owner] : '#FFFFFF', n = 44;
+    for (let i = 0; i < n; i++){ const a = i/n*Math.PI*2 + t*0.15; R(x, i % 2 ? col : '#000000', Math.round(cx + Math.cos(a)*rr), Math.round(cy + Math.sin(a)*rr*0.8), 2, 2); }
+  }
+  const list = [];
+  for (const d of G.deposits) list.push([(d.ty+2)*16, 0, d]);
+  for (const b of G.buildings) list.push([(b.ty+b.h)*16 - (b.role === 'wall' ? 1 : 0), 1, b]);
+  for (const u of G.units) list.push([u.z*16 + 4, 2, u]);
+  for (const d of G.dying) list.push([d.e.z*16 + 4, 3, d]);
+  for (const z of G.zones) list.push([z.z*16, 4, z]);
+  list.sort((a, b) => a[0] - b[0]);
+  for (const [, k, e] of list){
+    if (k === 0){ const s = depositSprite(); const px = e.tx*16 - ox, py = e.ty*16 - s.et - oy; if (px > BW || py > BH || px < -40 || py < -40) continue; x.drawImage(s, px, py); }
+    else if (k === 1){
+      const s = bldSprite(e.fac, e.role, e.team, e.role === 'wall' ? wallMask(e) : 0);
+      const px = e.tx*16 - ox, py = e.ty*16 - s.et - oy; if (px > BW || py > BH || px < -60 || py + s.height < 0) continue;
+      if (e.built) x.drawImage(s, px, py);
+      else { const p = Math.max(0.12, e.progress), hgt = Math.ceil(s.height*p); x.drawImage(s, 0, s.height - hgt, s.width, hgt, px, py + s.height - hgt, s.width, hgt);
+        const fh = e.h*16, top = py + s.height - fh; for (let i = 0; i < e.w*16; i += 6) R(x, '#AA5500', px + i, top, 1, fh); R(x, '#AA5500', px, top + fh - 1, e.w*16, 1); R(x, '#AA5500', px, top + Math.floor(fh/2), e.w*16, 1); }
+      if (e.flash > 0){ e.flash -= 1/60; x.globalAlpha = 0.45; R(x, '#FFFFFF', px + 2, py + s.et + 2, e.w*16 - 4, e.h*16 - 4); x.globalAlpha = 1; }
+    }
+    else if (k === 2 || k === 3){
+      const u = k === 2 ? e : e.e; if (k === 3 && Math.floor(e.t*10) % 2) continue;
+      const moving = u.moving || u.working, frame = moving ? (Math.floor((t + u.anim) * (u.working ? 5 : 7)) % 2) : 0;
+      const s = unitSprite(u.fac, u.role, u.team, frame, u.left);
+      let px = Math.round(u.x*16) - 8 - ox; const py = Math.round(u.z*16) - 12 - oy;
+      if (u.swing > 0){ px += u.left ? -1 : 1; u.swing -= 1/60; }
+      if (px < -20 || py < -20 || px > BW+4 || py > BH+4) continue;
+      x.drawImage(s, px, py);
+      if (u.flash > 0){ u.flash -= 1/60; if (Math.floor(u.flash*40) % 2){ x.globalAlpha = 0.6; x.globalCompositeOperation = 'lighter'; x.drawImage(s, px, py); x.globalCompositeOperation = 'source-over'; x.globalAlpha = 1; } }
+      if (u.carry){ R(x, '#000000', px + 5, py - 3, 5, 4); R(x, u.carryType === 'a' ? '#FFFF55' : '#AA5500', px + 6, py - 2, 3, 2); }
+    } else {
+      const cx = Math.round(e.x*16) - ox, cy = Math.round(e.z*16) - oy; if (cx < -20 || cy < -30 || cx > BW+20 || cy > BH+20) continue;
+      R(x, '#555555', cx - 3, cy - 1, 7, 3); R(x, '#000000', cx - 1, cy - 24, 3, 24); R(x, '#FFFFFF', cx, cy - 23, 1, 23);
+      const col = e.owner >= 0 ? TEAM_CSS[e.owner] : (e.cteam >= 0 ? TEAM_CSS[e.cteam] : '#FFFFFF');
+      const fy = cy - 8 - Math.round(14*(e.cval/100)), wv = Math.floor(t*3 + e.x) % 2;
+      ORect(x, cx + 1, fy + wv, 9, 6, col);
+    }
+  }
+  for (const p of G.proj){
+    const f = p.t / p.dur, wx = (p.x0 + (p.tx - p.x0)*f)*16 - ox, wy = (p.z0 + (p.tz - p.z0)*f)*16 - oy;
+    if (p.kind === 'arrow'){ const a = Math.atan2(p.tz - p.z0, p.tx - p.x0), dx = Math.cos(a), dy = Math.sin(a); for (let i = 0; i < 4; i++) R(x, i === 0 ? '#FFFFFF' : '#AA5500', wx - dx*i, wy - dy*i - 6, 1, 1); }
+    else if (p.kind === 'bullet') R(x, '#FFFF55', wx, wy - 6, 2, 1);
+    else { const arc = Math.sin(f*Math.PI)*24; R(x, '#000000', wx - 1, wy, 3, 1); if (p.kind === 'rock'){ R(x, '#000000', wx - 2, wy - arc - 8, 5, 5); R(x, '#AAAAAA', wx - 1, wy - arc - 7, 3, 3); } else { R(x, '#000000', wx - 1, wy - arc - 7, 3, 3); R(x, '#FF5500', wx, wy - arc - 6, 1, 1); } }
+  }
+  for (const f of G.fx){
+    const cx = Math.round(f.x*16) - ox, cy = Math.round(f.z*16) - oy, k = f.t / f.life;
+    if (f.kind === 'boom'){ const r = Math.round((2 + f.size*5) * (0.4 + k)), cols = ['#FFFFFF','#FFFF55','#FFAA00','#FF5500','#AA0000'], ci = Math.min(4, Math.floor(k*5)); disc(x, cx, cy - 4, r + 1, '#000000'); disc(x, cx, cy - 4, r, cols[ci]); if (ci < 3) disc(x, cx, cy - 4, Math.max(1, r - 3), cols[ci + 1]); }
+    else if (f.kind === 'flash'){ R(x, '#FFFF55', cx - 1, cy - 7, 3, 3); R(x, '#FFFFFF', cx, cy - 6, 1, 1); }
+    else if (f.kind === 'mark'){ const r = Math.round(2 + k*6); R(x, f.col, cx - r, cy, 2, 1); R(x, f.col, cx + r - 1, cy, 2, 1); R(x, f.col, cx, cy - r, 1, 2); R(x, f.col, cx, cy + r - 1, 1, 2); }
+  }
+  for (const p of G.parts){ const s = p.grow ? Math.round(p.s + p.t*1.2) : p.s; R(x, p.col, p.x - ox, p.y - oy, s, s); }
+  for (const e of selection){
+    if (e.kind === 'unit'){ const px = Math.round(e.x*16) - ox, py = Math.round(e.z*16) - oy; brackets(x, px - 8, py - 13, 16, 16, e.team === 0 ? '#55FF55' : '#FF5555'); }
+    else if (e.kind === 'building'){ const px = e.tx*16 - ox, py = e.ty*16 - oy; brackets(x, px - 1, py - 1, e.w*16 + 2, e.h*16 + 2, e.team === 0 ? '#55FF55' : '#FF5555');
+      if (e.team === 0 && e.rally){ const fx = Math.round(e.rally.x*16) - ox, fy = Math.round(e.rally.z*16) - oy, bx = Math.round(e.x*16) - ox, by = Math.round(e.z*16) - oy;
+        const n = Math.max(1, Math.floor(Math.hypot(fx - bx, fy - by) / 5)); for (let i = 1; i < n; i++) R(x, '#FFFFFF', bx + (fx - bx)*i/n, by + (fy - by)*i/n, 1, 1); drawFlag(x, fx, fy, TEAM_CSS[0], t); } }
+    else brackets(x, e.tx*16 - ox - 1, e.ty*16 - oy - 1, 34, 34, '#FFFF55');
+  }
+  for (const u of G.units){ if (!sel.has(u) && u.hp >= u.maxhp) continue; const px = Math.round(u.x*16) - ox, py = Math.round(u.z*16) - oy; if (px < -10 || py < -20 || px > BW+10 || py > BH+10) continue; drawHp(x, px - 6, py - 16, 12, u.hp/u.maxhp); }
+  for (const b of G.buildings){
+    if (!sel.has(b) && b.hp >= b.maxhp && b.built && !b.queue.length) continue;
+    const s = bldSprite(b.fac, b.role, b.team, b.role === 'wall' ? wallMask(b) : 0), px = b.tx*16 - ox, py = b.ty*16 - s.et - oy - 5, w = Math.max(10, b.w*16 - 8);
+    if (px > BW || py > BH || px < -60 || py < -60) continue;
+    if (!b.built) drawHp(x, px + (b.w === 1 ? 3 : 4), py, w, b.progress, '#FFFF55'); else drawHp(x, px + (b.w === 1 ? 3 : 4), py, w, b.hp/b.maxhp);
+    if (b.queue.length && b.team === 0){ R(x, '#000000', px + 3, py + 3, w + 2, 3); R(x, '#55AAFF', px + 4, py + 4, Math.round(w*Math.min(1, b.qt/UT[b.queue[0]].time)), 1); } }
+  if (buildMode && hover && !isTouch){
+    const g = toWorld(hover.x, hover.y), d = BT[buildMode];
+    if (buildMode === 'wall'){ const a = wallStart || {tx:Math.floor(g.x), ty:Math.floor(g.z)}, b = {tx:Math.floor(g.x), ty:Math.floor(g.z)};
+      x.globalAlpha = 0.6; for (const [tx, ty] of wallLine(a, b)) R(x, canPlace('wall', tx, ty, 0) ? '#55FF55' : '#FF5555', tx*16 - ox + 2, ty*16 - oy + 2, 12, 12); x.globalAlpha = 1; }
+    else { const tx = Math.round(g.x - d.w/2), ty = Math.round(g.z - d.h/2), s = bldSprite(camp, buildMode, 0, 0);
+      x.globalAlpha = 0.6; x.drawImage(s, tx*16 - ox, ty*16 - s.et - oy); x.globalAlpha = 1;
+      brackets(x, tx*16 - ox, ty*16 - oy, d.w*16, d.h*16, canPlace(buildMode, tx, ty, 0) ? '#55FF55' : '#FF5555'); }
+  }
+  if (buildMode === 'wall' && wallStart && Math.floor(t*4) % 2 === 0) brackets(x, wallStart.tx*16 - ox, wallStart.ty*16 - oy, 16, 16, '#FFFF55');
+}
+function updFx(dt){
+  for (let i = G.fx.length - 1; i >= 0; i--){ const f = G.fx[i]; f.t += dt; if (f.t >= f.life) G.fx.splice(i, 1); }
+  for (let i = G.parts.length - 1; i >= 0; i--){ const p = G.parts[i]; p.t += dt; p.vy += p.g*dt; p.x += p.vx*dt; p.y += p.vy*dt; if (p.t >= p.life) G.parts.splice(i, 1); }
+  for (let i = G.dying.length - 1; i >= 0; i--){ const d = G.dying[i]; d.t += dt; if (d.t > 0.7) G.dying.splice(i, 1); }
+}
+
+/* ================= Minicarte ================= */
+const mini = $('#mini'), mctx = mini.getContext('2d'); let miniBase = null, miniDirty = true;
+function initMini(){ mini.width = G.W*2; mini.height = G.H*2; mini.style.width = '128px'; mini.style.height = Math.round(128 * G.H / G.W) + 'px'; miniBase = mk(mini.width, mini.height); miniDirty = true; }
+function drawMini(){
+  const s = 2, W = G.W, H = G.H;
+  if (miniDirty){
+    const b = miniBase.getContext('2d'); R(b, '#55AA00', 0, 0, W*s, H*s);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (G.occ[y*W+x] === 1) R(b, '#005500', x*s, y*s, s, s);
+    for (const d of G.deposits) R(b, '#FFFF55', d.tx*s, d.ty*s, 2*s, 2*s);
+    for (const z of G.zones){ const col = z.owner >= 0 ? TEAM_CSS[z.owner] : '#FFFFFF'; for (let i = 0; i < 16; i++){ const a = i/16*Math.PI*2; R(b, col, Math.round((z.x + Math.cos(a)*z.r)*s), Math.round((z.z + Math.sin(a)*z.r)*s), 1, 1); } }
+    for (const bd of G.buildings) R(b, TEAM_COL[bd.team][bd.role === 'wall' ? 1 : 0], bd.tx*s, bd.ty*s, bd.w*s, bd.h*s);
+    miniDirty = false;
+  }
+  mctx.drawImage(miniBase, 0, 0);
+  for (const u of G.units) R(mctx, TEAM_CSS[u.team], Math.round(u.x*s) - 1, Math.round(u.z*s) - 1, 2, 2);
+  mctx.strokeStyle = '#FFFFFF'; mctx.lineWidth = 1; mctx.strokeRect(Math.round(camX/16*s) + 0.5, Math.round(camY/16*s) + 0.5, Math.round(BW/16*s), Math.round(BH/16*s));
+}
+function miniJump(ev){ const r = mini.getBoundingClientRect(); camX = (ev.clientX - r.left) / r.width * G.W*16 - BW/2; camY = (ev.clientY - r.top) / r.height * G.H*16 - BH/2; clampCam(); }
+let miniDown = false;
+mini.addEventListener('pointerdown', ev => { ev.stopPropagation(); miniDown = true; mini.setPointerCapture?.(ev.pointerId); miniJump(ev); });
+mini.addEventListener('pointermove', ev => { if (miniDown) miniJump(ev); });
+mini.addEventListener('pointerup', () => miniDown = false);
+
+/* ================= Panneau de commandement ================= */
+const pName = $('#pName'), pSw = $('#pSw'), pInfo = $('#pInfo'), pBtns = $('#pBtns'), pQueue = $('#pQueue');
+let panelKey = '';
+const costHtml = c => `<span class="cost">${c.a ? `<span class="a">${c.a}</span>` : ''}${c.m ? `<span class="m">${c.m}</span>` : ''}</span>`;
+function refreshPanel(force){
+  if (!G) return;
+  const sel = selection, T = G.teams[0], one = sel[0], N = NAMES[camp]; const btns = [];
+  if (!sel.length){ pSw.style.background = 'transparent'; pName.textContent = `CARTE ${G.cfg.n}`; }
+  else if (one.kind === 'unit' && one.team === 0){
+    const ws = sel.filter(u => !isMil(u)); pSw.style.background = TEAM_CSS[0];
+    pName.textContent = sel.length === 1 ? N[one.role] : `${sel.length} UNITÉS`;
+    if (ws.length && buildMode === ''){
+      for (const r of BUILD_LIST){ const d = BT[r], ok = canAfford(0, d.cost) && (!d.req || hasBuilt(0, d.req)); btns.push({act:'b:' + r, label:N[r], cost:d.cost, dis:!ok}); }
+      btns.push({act:'back', label:'Retour'});
+    } else if (ws.length && buildMode) btns.push({act:'cancel', label:'Annuler'});
+    else { if (ws.length) btns.push({act:'buildmenu', label:'Construire'}); btns.push({act:'stop', label:'Stop'}); btns.push({act:'center', label:'Centrer'}); }
+  } else if (one.kind === 'building' && one.team === 0){
+    pSw.style.background = TEAM_CSS[0]; pName.textContent = N[one.role];
+    if (one.built && BT[one.role].train){
+      for (const r of BT[one.role].train){ const S0 = UT[r]; btns.push({act:'t:' + r, label:N[r], cost:S0.cost, dis:!canAfford(0, S0.cost) || T.pop + S0.pop > T.popCap || one.queue.length >= 5}); }
+      btns.push({act:'rally', label:'Drapeau', on:rallyMode});
+      if (one.rally) btns.push({act:'unrally', label:'Retirer le drapeau'});
+    }
+  } else {
+    pSw.style.background = one.team >= 0 ? TEAM_CSS[one.team] : '#FFFF55';
+    pName.textContent = one.kind === 'deposit' ? 'GISEMENT' : NAMES[one.fac][one.role];
+  }
+  const key = sel.map(e => e.id).join(',') + '|' + buildMode + '|' + rallyMode + '|' + btns.map(b => b.act + (b.dis ? 0 : 1)).join(',');
+  if (force || key !== panelKey){
+    panelKey = key;
+    pBtns.innerHTML = btns.map(b => `<button class="cmd${b.on ? ' on' : ''}" type="button" data-act="${b.act}"${b.dis ? ' disabled' : ''}>${b.label}${b.cost ? costHtml(b.cost) : ''}</button>`).join('');
+    pBtns.hidden = !btns.length;
+  }
+  let info = '';
+  if (!sel.length) info = isTouch ? 'Touchez une unité ou un bâtiment.' : 'Cliquez une unité ou un bâtiment. Maj + glisser : sélection en cadre.';
+  else if (sel.length === 1){
+    const hp = Math.max(0, Math.ceil(one.hp));
+    if (one.kind === 'deposit') info = `Reste ${one.amount} de minerai`;
+    else if (one.kind === 'building' && !one.built) info = `En construction : ${Math.floor(one.progress*100)} %`;
+    else { info = `Vie ${hp}/${one.maxhp}<div class="hp"><i style="width:${hp/one.maxhp*100}%"></i></div>`;
+      if (one.kind === 'unit' && one.carry) info = `Transporte ${one.carry} de ${one.carryType === 'a' ? 'minerai' : 'bois'} · ` + info;
+      else if (one.kind === 'unit' && UT[one.role].gather) info = (UT[one.role].gather === 'm' ? 'Récolte le bois' : 'Récolte le minerai') + ' · ' + info;
+      if (one.kind === 'building' && one.team === 0 && BT[one.role].train && !one.rally) info = 'Touchez le terrain ou « Drapeau » pour choisir où sortent les unités. ' + info; }
+  } else { const counts = {}; for (const u of sel) counts[u.role] = (counts[u.role] || 0) + 1; info = Object.entries(counts).map(([r, n]) => `${n} × ${(one.team === 0 ? N : NAMES[one.fac])[r]}`).join(' · '); }
+  if (buildMode === 'wall') info = wallStart ? 'Touchez le point d’arrivée du mur.' : `Touchez le point de départ du mur (${BT.wall.cost.m} de bois par segment).`;
+  else if (buildMode) info = `Touchez la carte pour placer : ${N[buildMode]}`;
+  if (rallyMode) info = 'Touchez la carte pour planter le drapeau. Sur un arbre ou un gisement, les ouvriers iront récolter.';
+  if (pInfo._v !== info){ pInfo.innerHTML = info; pInfo._v = info; }
+  if (one && one.kind === 'building' && one.team === 0 && one.queue.length){
+    pQueue.hidden = false;
+    pQueue.innerHTML = one.queue.map(q => `<span class="q">${N[q]}</span>`).join('') + `<span class="bar"><i style="width:${Math.min(100, one.qt / UT[one.queue[0]].time * 100)}%"></i></span>`;
+  } else pQueue.hidden = true;
+}
+pBtns.addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b || b.disabled || !G) return;
+  const act = b.dataset.act;
+  if (act === 'buildmenu'){ buildMode = ''; refreshPanel(true); }
+  else if (act === 'back' || act === 'cancel'){ buildMode = null; wallStart = null; refreshPanel(true); }
+  else if (act === 'stop'){ for (const u of ownUnits()) orderStop(u); }
+  else if (act === 'center'){ const u = selection[0]; camX = u.x*16 - BW/2; camY = u.z*16 - BH/2; clampCam(); }
+  else if (act === 'rally'){ rallyMode = !rallyMode; refreshPanel(true); }
+  else if (act === 'unrally'){ selection[0].rally = null; refreshPanel(true); }
+  else if (act.startsWith('b:')){ buildMode = act.slice(2); wallStart = null; refreshPanel(true); }
+  else if (act.startsWith('t:')){ const r = enqueue(selection[0], act.slice(2)); if (r) toast(r); refreshPanel(true); }
+});
+$('#pClose').addEventListener('click', () => { if (G) setSelection([]); });
+let toastT = 0;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.style.opacity = 1; toastT = 2.2; }
+function updTop(){
+  const T = G.teams[0];
+  $('#rA').textContent = Math.floor(T.a); $('#rM').textContent = Math.floor(T.m); $('#rP').textContent = `${T.pop}/${T.popCap}`;
+  $('#rZ').textContent = `${G.zones.filter(z => z.owner === 0).length}/${G.zones.length}`;
+  const holder = G.teams.find(t => t.hold > 0), hb = $('#holdBar');
+  if (holder){ hb.hidden = false; hb.innerHTML = `<span style="color:${TEAM_CSS[holder.id]};font-weight:600">${holder.id === 0 ? 'Vous tenez' : 'Les ' + TEAM_NAME[holder.id] + ' tiennent'}</span> toutes les zones : ${Math.ceil(HOLD_TIME - holder.hold)} s`; }
+  else hb.hidden = true;
+}
+(() => { const a = $('#icoA').getContext('2d'); ORect(a, 0, 0, 5, 5, '#FFAA00'); R(a, '#FFFF55', 1, 1, 2, 2);
+  const m = $('#icoM').getContext('2d'); ORect(m, 0, 0, 5, 5, '#AA5500'); R(m, '#FFAA55', 1, 1, 1, 3); R(m, '#550000', 3, 1, 1, 3); })();
+
+/* ================= Boucle ================= */
+function separate(dt){
+  const us = G.units, n = us.length;
+  for (let i = 0; i < n; i++){ const a = us[i], ra = UT[a.role].r;
+    for (let j = i+1; j < n; j++){ const b = us[j], dx = b.x - a.x, dz = b.z - a.z, rr = ra + UT[b.role].r;
+      if (dx > rr || dx < -rr || dz > rr || dz < -rr) continue; const d2 = dx*dx + dz*dz; if (d2 >= rr*rr) continue;
+      const d = Math.sqrt(d2) || 0.01, push = (rr - d) * 0.5 * Math.min(1, dt*12), nx = d === 0.01 ? Math.random()-0.5 : dx/d, nz = d === 0.01 ? Math.random()-0.5 : dz/d;
+      const am = a.path.length > a.pi ? 0.6 : 1, bm = b.path.length > b.pi ? 0.6 : 1;
+      tryShift(a, -nx*push*am, -nz*push*am); tryShift(b, nx*push*bm, nz*push*bm); } }
+}
+function tryShift(u, dx, dz){ const nx = u.x + dx, nz = u.z + dz;
+  if (walkT(Math.floor(nx), Math.floor(nz), u.team)){ u.x = nx; u.z = nz; } else if (walkT(Math.floor(nx), Math.floor(u.z), u.team)) u.x = nx; else if (walkT(Math.floor(u.x), Math.floor(nz), u.team)) u.z = nz; }
+let thinkT = 0, slowT = 0, last = performance.now();
+function step(dt){
+  G.time += dt;
+  for (const u of G.units.slice()) if (!u.dead) updUnit(u, dt);
+  separate(dt);
+  for (const b of G.buildings.slice()) if (!b.dead) updBuilding(b, dt);
+  updProj(dt);
+  if (G.over) return;
+  updZones(dt);
+  thinkT += dt;
+  if (thinkT >= 0.25){ thinkT = 0; for (const t of G.teams){ if (!t.ai || !t.alive) continue; t.think -= 0.25; if (t.think <= 0){ t.think = 1; aiThink(t); } } }
+}
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!G) return;
+  if (!paused()){
+    const sp = 220 * dt;
+    if (keys.has('arrowleft') || keys.has('q') || keys.has('a')) camX -= sp;
+    if (keys.has('arrowright') || keys.has('d')) camX += sp;
+    if (keys.has('arrowup') || keys.has('z') || keys.has('w')) camY -= sp;
+    if (keys.has('arrowdown') || keys.has('s')) camY += sp;
+    if (keys.size) clampCam();
+    step(dt);
+  }
+  updFx(paused() ? 0 : dt);
+  render();
+  slowT += dt;
+  if (slowT > 0.2){ slowT = 0; drawMini(); updTop(); refreshPanel(false); }
+  if (toastT > 0){ toastT -= dt; if (toastT <= 0) $('#toast').style.opacity = 0; }
+}
+
+/* ================= Écrans et progression ================= */
+let level = store.level(), shown = 'start';
+const paused = () => shown !== 'game' || !$('#rotate').hidden;
+function show(name){ shown = name; $('#scrStart').hidden = name !== 'start'; $('#scrPause').hidden = name !== 'pause'; $('#scrEnd').hidden = name !== 'end'; }
+const resumable = () => G && G.started && !G.over && G.cfg.n === level && G.teams[0].fac === camp;
+function fillStart(){
+  const cfg = levelCfg(level);
+  $('#sEyebrow').textContent = `CARTE ${level} · ${cfg.enemies} ARMÉE${cfg.enemies > 1 ? 'S' : ''} ADVERSE${cfg.enemies > 1 ? 'S' : ''} · ${cfg.zones} ZONES`;
+  $('#btnStart').textContent = resumable() ? 'REPRENDRE' : `JOUER LA CARTE ${level}`;
+  $('#btnReset').hidden = level <= 1;
+  document.querySelectorAll('.camp').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.camp === camp)));
+}
+function drawPreviews(){
+  for (const [id, fac] of [['#prevN', 'nature'], ['#prevP', 'pollution']]){
+    const x = $(id).getContext('2d'); x.clearRect(0, 0, 64, 16);
+    ['wood', 'ore', 'ranged', 'siege'].forEach((r, i) => x.drawImage(unitSprite(fac, r, 0, 0, false), i*16, 0));
+  }
+}
+document.querySelectorAll('.camp').forEach(b => b.addEventListener('click', () => { camp = b.dataset.camp; store.set('ldf_camp', camp); fillStart(); }));
+function startLevel(){ newGame(level); G.started = true; show('game'); last = performance.now(); }
+$('#btnStart').addEventListener('click', () => { if (resumable()){ show('game'); last = performance.now(); return; } startLevel(); });
+$('#btnReset').addEventListener('click', () => { level = 1; store.set('ldf_level', 1); fillStart(); });
+$('#menuBtn').addEventListener('click', () => { if (shown === 'game') show('pause'); });
+$('#btnResume').addEventListener('click', () => { show('game'); last = performance.now(); });
+$('#btnRestart').addEventListener('click', startLevel);
+$('#btnHelp').addEventListener('click', () => { fillStart(); show('start'); });
+$('#btnHome').addEventListener('click', () => { fillStart(); show('start'); });
+function endGame(win, text){
+  if (G.over) return; G.over = true;
+  if (win){ level = G.cfg.n + 1; store.set('ldf_level', level); }
+  const nc = levelCfg(level);
+  $('#eEyebrow').textContent = `CARTE ${G.cfg.n} · ${Math.floor(G.time/60)} MIN ${String(Math.floor(G.time%60)).padStart(2,'0')} S`;
+  $('#eTitle').textContent = win ? 'Victoire' : 'Défaite';
+  $('#eText').textContent = text + (win ? ` La carte ${level} est débloquée : ${nc.enemies} armée${nc.enemies > 1 ? 's' : ''} adverse${nc.enemies > 1 ? 's' : ''}.` : '');
+  $('#btnNext').textContent = win ? `CARTE ${level}` : 'RÉESSAYER';
+  $('#btnAgain').hidden = !win;
+  const g = G; setTimeout(() => { if (G === g && g.over) show('end'); }, 900);
+}
+$('#btnNext').addEventListener('click', startLevel);
+$('#btnAgain').addEventListener('click', () => { if (G && G.over && level > G.cfg.n) level = G.cfg.n; startLevel(); });
+function checkOrientation(){ $('#rotate').hidden = !(isTouch && window.innerHeight > window.innerWidth); }
+addEventListener('resize', resize);
+addEventListener('orientationchange', () => setTimeout(resize, 200));
+document.addEventListener('visibilitychange', () => { if (document.hidden && shown === 'game') show('pause'); });
+
+resize();
+drawPreviews();
+newGame(level);
+fillStart();
+show('start');
+requestAnimationFrame(frame);
+window.__ldf = {get G(){ return G; }, step, handleTap, setSelection, boxSelect, toScreen, toWorld, startLevel, show, spawnUnit, orderAttackMove, addBuilding, placeWalls, render,
+  setCam(x, y){ camX = x; camY = y; clampCam(); }, get camp(){ return camp; }, setCamp(c){ camp = c; }};
+})();
+</script>
+
+<a href="index.html" id="arcadeBack" aria-label="Retour à SOArcade" style="position:fixed;left:calc(env(safe-area-inset-left,0px) + 8px);bottom:calc(env(safe-area-inset-bottom,0px) + 8px);z-index:9999;font:600 12px/1 system-ui,sans-serif;color:#fff;background:rgba(10,10,20,.78);border:1px solid rgba(255,255,255,.35);padding:8px 10px;text-decoration:none;border-radius:4px">◀ Menu</a>
+</body></html>
