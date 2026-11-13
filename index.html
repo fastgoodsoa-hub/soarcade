@@ -3,115 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>SOArcade : les jeux de SOA</title>
-<meta name="description" content="Des jeux gratuits pour patienter chez SOA, le restaurant 100 % végétal de Boulogne-Billancourt. Sans inscription, sans téléchargement, sans publicité.">
-<link rel="canonical" href="https://fastgoodsoa-hub.github.io/soarcade/">
-<meta property="og:title" content="SOArcade : les jeux de SOA">
-<meta property="og:description" content="Des jeux gratuits pour patienter chez SOA, le restaurant 100 % végétal de Boulogne-Billancourt. Sans inscription, sans téléchargement, sans publicité.">
+<title>Frigo Express | SOArcade</title>
+<meta name="description" content="Vide le frigo et le tapis roulant : trois aliments identiques sur la même étagère disparaissent.">
+<link rel="canonical" href="https://fastgoodsoa-hub.github.io/soarcade/frigo-express/">
+<meta property="og:title" content="Frigo Express | SOArcade">
+<meta property="og:description" content="Vide le frigo et le tapis roulant : trois aliments identiques sur la même étagère disparaissent.">
 <meta property="og:locale" content="fr_FR">
 <meta name="theme-color" content="#0f2b1f">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%230f2b1f'/%3E%3Cpath d='M4 11c0-4 3-7 8-7-1 5-4 8-8 7z' fill='%238fe36a'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="../style.css">
 
 </head>
 <body>
 <div class="wrap">
-  <header class="hero">
-    <div class="by">SOA · Sans Origine Animale</div>
-    <h1><b>SO</b>Arcade</h1>
-    <p class="lead">Le temps qu'on prépare ton plat, choisis un jeu. Ils se jouent au doigt, directement sur ton téléphone.</p>
-    <ul class="chips"><li>Gratuit</li><li>Sans inscription</li><li>Sans publicité</li><li>Rien à télécharger</li></ul>
-  </header>
-  <main class="grid">
-    <a class="game" href="logigramme/index.html">
-      <canvas class="art" data-art="logi" width="160" height="90" aria-hidden="true"></canvas>
-      <div class="body">
-        <div class="top"><h2>Logigramme</h2><span class="genre">Logique</span></div>
-        <p>Une énigme de déduction toujours nouvelle : lis les indices, coche et barre la grille, trouve qui fait quoi.</p>
-        <div class="meta"><span class="tag">Téléphone ou ordinateur</span><span class="play">Jouer</span></div>
-      </div>
-    </a>
-    <a class="game" href="frigo-express/index.html">
+  <nav class="crumb"><a href="../index.html">SOArcade</a> › Frigo Express</nav>
+  <main class="sheet">
+    <div class="shot">
       <canvas class="art" data-art="frigo" width="160" height="90" aria-hidden="true"></canvas>
-      <div class="body">
-        <div class="top"><h2>Frigo Express</h2><span class="genre">Rangement</span></div>
-        <p>Range le frigo avant la fin du chrono : trois produits identiques sur la même étagère disparaissent.</p>
-        <div class="meta"><span class="tag">Téléphone en portrait</span><span class="play">Jouer</span></div>
-      </div>
-    </a>
-    <a class="game" href="cuisine-assiegee/index.html">
-      <canvas class="art" data-art="cuisine" width="160" height="90" aria-hidden="true"></canvas>
-      <div class="body">
-        <div class="top"><h2>Cuisine Assiégée</h2><span class="genre">Tower defense</span></div>
-        <p>Fourmis, rats, mouches et microbes foncent vers le garde-manger. Construis un labyrinthe de défenses pour les arrêter.</p>
-        <div class="meta"><span class="tag">Ordinateur ou tablette</span><span class="play">Jouer</span></div>
-      </div>
-    </a>
-    <a class="game" href="casse-brique/index.html">
-      <canvas class="art" data-art="brique" width="160" height="90" aria-hidden="true"></canvas>
-      <div class="body">
-        <div class="top"><h2>Casse-Brique</h2><span class="genre">Classique</span></div>
-        <p>La raquette suit ton doigt : casse toutes les briques, niveau après niveau.</p>
-        <div class="meta"><span class="tag">Téléphone en portrait</span><span class="play">Jouer</span></div>
-      </div>
-    </a>
-    <a class="game" href="lievre-et-chiens/index.html">
-      <canvas class="art" data-art="lievre" width="160" height="90" aria-hidden="true"></canvas>
-      <div class="body">
-        <div class="top"><h2>Le Lièvre et les Chiens</h2><span class="genre">Réflexion</span></div>
-        <p>Un jeu de plateau traditionnel : trois chiens doivent coincer le lièvre avant qu'il ne s'échappe.</p>
-        <div class="meta"><span class="tag">Téléphone ou ordinateur</span><span class="play">Jouer</span></div>
-      </div>
-    </a>
-    <a class="game" href="heli-secours/index.html">
-      <canvas class="art" data-art="heli" width="160" height="90" aria-hidden="true"></canvas>
-      <div class="body">
-        <div class="top"><h2>Héli Secours</h2><span class="genre">Sauvetage</span></div>
-        <p>Pilote un hélicoptère de secours, pose-toi sur les plateformes et ramène les rescapés à la base.</p>
-        <div class="meta"><span class="tag">Téléphone à l'horizontale</span><span class="play">Jouer</span></div>
-      </div>
-    </a>
-    <a class="game" href="citadelle/index.html">
-      <canvas class="art" data-art="citadelle" width="160" height="90" aria-hidden="true"></canvas>
-      <div class="body">
-        <div class="top"><h2>Citadelle</h2><span class="genre">Tower defense</span></div>
-        <p>Défends ton château vu du dessus contre des vagues venues de tous les côtés.</p>
-        <div class="meta"><span class="tag">Mieux sur ordinateur</span><span class="play">Jouer</span></div>
-      </div>
-    </a>
-    <a class="game" href="traque-dracula/index.html">
-      <canvas class="art" data-art="dracula" width="160" height="90" aria-hidden="true"></canvas>
-      <div class="body">
-        <div class="top"><h2>La Traque de Dracula</h2><span class="genre">Course</span></div>
-        <p>De Londres à la crypte du comte : cours, saute, glisse sur trois voies et ramasse des pièces.</p>
-        <div class="meta"><span class="tag">Téléphone en portrait</span><span class="play">Jouer</span></div>
-      </div>
-    </a>
-    <a class="game" href="minuit-forain/index.html">
-      <canvas class="art" data-art="forain" width="160" height="90" aria-hidden="true"></canvas>
-      <div class="body">
-        <div class="top"><h2>Minuit Forain</h2><span class="genre">Arène</span></div>
-        <p>Trois contre trois dans une fête foraine abandonnée : première troupe à 10 points.</p>
-        <div class="meta"><span class="tag">Téléphone à l'horizontale</span><span class="play">Jouer</span></div>
-      </div>
-    </a>
-    <a class="game" href="ligne-de-front/index.html">
-      <canvas class="art" data-art="front" width="160" height="90" aria-hidden="true"></canvas>
-      <div class="body">
-        <div class="top"><h2>Ligne de Front</h2><span class="genre">Stratégie</span></div>
-        <p>La Nature contre la Pollution : choisis ton camp, bâtis ta base et prends les zones.</p>
-        <div class="meta"><span class="tag">Téléphone à l'horizontale</span><span class="play">Jouer</span></div>
-      </div>
-    </a>
+      <div class="bar"><span class="tag">Téléphone en portrait</span><a class="play" href="jeu.html">Jouer maintenant</a></div>
+    </div>
+    <article class="text">
+      <h1>Frigo Express</h1>
+      <p>Un jeu de rangement façon cuisine pro, avec des aliments kawaii. Le frigo est déjà plein, d'autres aliments arrivent par le tapis roulant : regroupe-les par trois pour tout faire disparaître.</p>
+      <h2>Comment jouer</h2>
+      <ul><li>Glisse un aliment d'une étagère à l'autre, du tapis vers le frigo, ou du frigo vers le tapis pour faire de la place.</li><li>Trois aliments identiques sur la même étagère disparaissent, et ceux du fond avancent.</li><li>Tu perds si le chrono arrive à zéro, si trois aliments tombent au bout du tapis, ou si le frigo reste plein 5 secondes.</li><li>Vide le frigo et le tapis pour passer au niveau suivant.</li><li>Trois aides : ralentir le tapis, coup de main et 20 secondes de plus.</li></ul>
+      <h2>Astuce</h2>
+      <p class="tipbox">Le tapis est une étagère de secours : poses-y un aliment gênant, mais reprends-le avant qu'il n'arrive à la poubelle.</p>
+      <p><a class="play" href="jeu.html">Jouer à Frigo Express</a></p>
+      <h2>Autres jeux</h2>
+      <div class="others"><a href="../logigramme/index.html">Logigramme</a><a href="../cuisine-assiegee/index.html">Cuisine Assiégée</a><a href="../casse-brique/index.html">Casse-Brique</a><a href="../lievre-et-chiens/index.html">Le Lièvre et les Chiens</a><a href="../heli-secours/index.html">Héli Secours</a><a href="../citadelle/index.html">Citadelle</a><a href="../traque-dracula/index.html">La Traque de Dracula</a><a href="../minuit-forain/index.html">Minuit Forain</a><a href="../ligne-de-front/index.html">Ligne de Front</a></div>
+    </article>
   </main>
 <footer class="site">
   <span>SOArcade · les jeux de SOA – Sans Origine Animale, Boulogne-Billancourt</span>
-  <nav><a href="index.html">Tous les jeux</a><a href="mentions-legales.html">Mentions légales</a><a href="confidentialite.html">Confidentialité</a></nav>
+  <nav><a href="../index.html">Tous les jeux</a><a href="../mentions-legales.html">Mentions légales</a><a href="../confidentialite.html">Confidentialité</a></nav>
 </footer>
 </div>
-<script src="art.js"></script>
+<script src="../art.js"></script>
 </body>
 </html>
